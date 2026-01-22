@@ -38,10 +38,10 @@ ENV/
 *~
 
 # Data files (sauf exemples)
-data/raw/*.csv
-data/processed/*.csv
-data/models/*.joblib
-data/models/*.pkl
+#data/raw/*.csv
+#data/processed/*.csv
+#data/models/*.joblib
+#data/models/*.pkl
 
 # Logs
 logs/*.log
