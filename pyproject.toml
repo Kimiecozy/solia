@@ -12,20 +12,22 @@ packages = ["backend"]
 
 
 [project]
-name = "olist-recommendation-system"
+name = "SolIA"
 version = "1.0.0"
-description = "Système de recommandation e-commerce pour l'enseignement du ML"
+description = "Générer une offre de prêt personnalisée et argumentée destinée aux petits vendeurs e-commerce"
 readme = "README.md"
 authors = [
-    {name = "Mohamed TRIBAK"}
+    {name = "Idriss Jourdan",
+    name = "Rezi Sabashvili",
+    name  = "Kim Thai",
+    name = "Cassandre Grilo"}
 ]
 keywords = [
     "machine-learning",
-    "recommendation-system",
+    "pret"
     "fastapi",
     "streamlit",
-    "ecommerce",
-    "education"
+    "ecommerce"
 ]
 requires-python = ">=3.12"
 
@@ -103,23 +105,23 @@ analysis = [
 
 # Installation complète
 full = [
-    "olist-recommendation-system[test,dev,deploy,analysis]"
+    "SolIA[test,dev,deploy,analysis]"
 ]
 
 [project.urls]
-Homepage = "https://github.com/your-org/olist-recommendation-system"
-Documentation = "https://your-org.github.io/olist-recommendation-system/"
-Repository = "https://github.com/your-org/olist-recommendation-system.git"
-"Bug Tracker" = "https://github.com/your-org/olist-recommendation-system/issues"
+Homepage = "https://github.com/Drecassan/solia"
+Documentation = "https://github.com/Drecassan/solia#README"
+Repository = "https://github.com/Drecassan/solia.git"
+"Bug Tracker" = "https://github.com/Drecassan/solia/issues"
 
 # ==========================================
 # 🎯 POINTS D'ENTRÉE
 # ==========================================
 [project.scripts]
-olist-train = "ml_pipeline.train_model:main"
-olist-api = "backend.app.main:main"
-olist-frontend = "frontend.app:main"
-olist-setup = "setup:main"
+SolIA-train = "ml_pipeline.train_model:main"
+SolIA-api = "backend.app.main:main"
+SolIA-frontend = "frontend.app:main"
+SolIA-setup = "setup:main"
 run-tests = "tests.run_tests:main"
 
 # ==========================================

@@ -1,8 +1,9 @@
 # 🛒 Olist Recommendation System
 
-**Système de Recommandation E-commerce - Master 2 SEP**
+**SolIA**
 
-Mohamed TRIBAK
+Jourdan Idriss, Sabashvili Rezi, Thai Kim et Grilo Cassandre
+Sous la direction de : Mohamed TRIBAK
 
 ---
 
@@ -69,8 +70,8 @@ graph TB
 
 ```bash
 # 1. Cloner le projet
-git clone <url-du-repo>
-cd olist_recommendation_system
+git clone https://github.com/Drecassan/solia.git
+cd SolIA
 
 # Installation d'UV
 pip install uv 
@@ -354,7 +355,7 @@ uv run pytest tests/ -v
 
 ## Conclusion
 
-Ce projet **Olist Recommendation System** vous donne une expérience complète du machine learning en production. Vous apprendrez :
+Ce projet **SolIA** vous donne une expérience complète du machine learning en production. Vous apprendrez :
 
 - **Machine Learning** appliqué à un cas d'usage réel
 - **Architecture logicielle** moderne et scalable
