@@ -571,7 +571,8 @@ pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     print("Chargement des données...")
 
-    customers = pd.read_csv(raw_data_dir / 'olist_customers_dataset.csv')
+    #customers = pd.read_csv(raw_data_dir / 'olist_customers_dataset.csv')
+    sellers = pd.read_csv(raw_data_dir / 'olist_sellers_dataset.csv')
     orders = pd.read_csv(raw_data_dir / 'olist_orders_dataset.csv')
     order_items = pd.read_csv(raw_data_dir / 'olist_order_items_dataset.csv')
     products = pd.read_csv(raw_data_dir / 'olist_products_dataset.csv')
@@ -591,10 +592,10 @@ pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         if col in orders.columns:
             orders[col] = pd.to_datetime(orders[col])
 
-    print(f"   Chargé: {len(customers)} clients, {len(orders)} commandes, "
+    print(f" {len(orders)} commandes, "
           f"{len(order_items)} items, {len(products)} produits, {len(reviews)} avis")
 
-    return customers, orders, order_items, products, reviews
+    return sellers, orders, order_items, products, reviews
 
 
 # ============================================
