@@ -15,14 +15,22 @@ Ce script:
 
 import argparse
 import sys
+import joblib
 from pathlib import Path
 
-from ml_pipeline.models.recommendation_model import RecommendationPipeline
+ROOT_DIR = Path(__file__).parent.parent
+sys.path.append(str(ROOT_DIR))
+
+# On remplace l'ancien pipeline par tes nouveaux outils de scoring
+from ml_pipeline.preprocessing.feature_engineering import RecommendationFeatureEngine, load_and_prepare_data
+from sklearn.ensemble import RandomForestRegressor 
+from sklearn.model_selection import train_test_split 
+from sklearn.metrics import r2_score, mean_absolute_error
 
 # Ajouter le répertoire parent au PYTHONPATH
 sys.path.append(str(Path(__file__).parent.parent))
 
-from config import RAW_DATA_DIR
+from config import RAW_DATA_DIR, MLConfig
 
 
 def check_data_availability(data_dir: Path) -> bool:
@@ -36,10 +44,12 @@ def check_data_availability(data_dir: Path) -> bool:
         True si toutes les données sont présentes
     """
     required_files = [
-        'olist_customers_dataset.csv',
         'olist_orders_dataset.csv',
         'olist_order_items_dataset.csv',
-        'olist_products_dataset.csv'
+        'olist_products_dataset.csv',
+        'olist_order_payments_dataset.csv',
+        'olist_sellers_dataset.csv',
+        'olist_order_reviews_dataset.csv'
     ]
 
     missing_files = []
@@ -57,79 +67,84 @@ def check_data_availability(data_dir: Path) -> bool:
 
 
 def train_recommendation_model(data_dir: Path) -> dict:
-    """
-    Entraîne le modèle de recommandation.
+    print("🧠 Démarrage de l'entraînement du modèle de scoring...")
 
-    Args:
-        data_dir: Répertoire contenant les données
+    # A. Chargement et Feature Engineering
+    sellers, orders, items, payments, reviews, products = load_and_prepare_data(data_dir)
+    engine = RecommendationFeatureEngine()
+    df_vendeurs = engine.create_seller_features(sellers, orders, items, payments, reviews, products)
 
-    Returns:
-        Métriques de performance
-    """
-    print("Démarrage de l'entraînement du modèle...")
+    # B. Définition des X (critères) et y (ce qu'on veut prédire)
+    features = ['avg_review_score', 'late_rate', 'avg_installments', 'active_months', 'solvability_score']
+    X = df_vendeurs[features].fillna(0)
+    y = df_vendeurs['total_revenue'] # On veut prédire la capacité de revenus du vendeur
 
-    # Initialiser le pipeline
-    pipeline = RecommendationPipeline()
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Entraîner
-    metrics = pipeline.train_pipeline(data_dir)
+    # C. Modèle Regressor
+    model = RandomForestRegressor(n_estimators=100, max_depth=10, random_state=42)
+    model.fit(X_train, y_train)
 
+    # D. Évaluation
+    y_pred = model.predict(X_test)
+    metrics = {
+        'r2': r2_score(y_test, y_pred),
+        'mae': mean_absolute_error(y_test, y_pred)
+    }
+
+    # E. Sauvegardes
+    joblib.dump(model, MLConfig.REVENUE_MODEL_FILE)
+    df_vendeurs.to_csv(MLConfig.SELLER_FEATURES_FILE)
+    
     return metrics
 
 
 def display_training_results(metrics: dict):
     """
-    Affiche les résultats d'entraînement de manière lisible.
-
-    Args:
-        metrics: Métriques de performance
+    Affiche les résultats du Scoring de Crédit (Régression).
     """
     print("\n" + "=" * 50)
-    print("RÉSULTATS D'ENTRAÎNEMENT")
-    print("" + "=" * 50)
+    print("📈 RÉSULTATS DU MODÈLE DE SOLVABILITÉ")
+    print("=" * 50)
 
-    print(f"Précision d'entraînement: {metrics['train_accuracy']:.3f}")
-    print(f"Précision de test: {metrics['test_accuracy']:.3f}")
-    print(f"Score AUC: {metrics['auc_score']:.3f}")
-    print(f"Cross-validation: {metrics['cv_mean']:.3f} ± {metrics['cv_std']:.3f}")
+    # Métriques de Régression
+    print(f"Précision du modèle (R² Score) : {metrics['r2']:.3f}")
+    print(f"Erreur Moyenne (MAE)          : {metrics['mae']:.2f} R$")
 
-    # Interprétation des résultats
-    auc = metrics['auc_score']
-    if auc >= 0.9:
-        performance = "Excellente"
-    elif auc >= 0.8:
-        performance = "Très bonne"
-    elif auc >= 0.7:
-        performance = "Bonne"
-    elif auc >= 0.6:
-        performance = "Correcte"
+    # Interprétation du R² (Coefficient de détermination)
+    r2 = metrics['r2']
+    if r2 >= 0.8:
+        fiabilite = "Excellente (Prédiction très fiable)"
+    elif r2 >= 0.6:
+        fiabilite = "Bonne (Utilisable pour décision de crédit)"
+    elif r2 >= 0.4:
+        fiabilite = "Moyenne (À coupler avec d'autres critères)"
     else:
-        performance = "À améliorer"
+        fiabilite = "Faible (Risque d'erreur élevé)"
 
-    print(f"Performance globale: {performance}")
+    print(f"Fiabilité du Scoring          : {fiabilite}")
 
-    # Conseils pédagogiques
+    # Section Conseils pour le Scoring
     print("\n" + "=" * 50)
-    print("CONSEILS")
-    print("" + "=" * 50)
+    print("💡 ANALYSE ET CONSEILS BUSINESS")
+    print("=" * 50)
 
-    if auc < 0.7:
-        print("🔧 Suggestions d'amélioration:")
-        print("   • Ajouter plus de features (interactions temporelles, etc.)")
-        print("   • Ajuster les hyperparamètres du RandomForest")
-        print("   • Équilibrer davantage les données d'entraînement")
-        print("   • Essayer d'autres algorithmes (XGBoost, LightGBM)")
+    print(f"• L'erreur moyenne est de {metrics['mae']:.2f} R$.")
+    print(f"  Cela signifie que vos prédictions de revenus s'écartent de ce montant en moyenne.")
+    
+    print("\n🔧 Pistes pour améliorer le score de crédit :")
+    print("  • Vérifier les 'Outliers' (vendeurs avec un CA anormalement élevé).")
+    print("  • Ajouter des données sur le type de produits (certaines catégories sont plus risquées).")
+    print("  • Tester un modèle Gradient Boosting (XGBoost ou LightGBM) pour plus de précision.")
 
-    print("Points d'apprentissage:")
-    print("   • Observer l'importance des features")
-    print("   • Analyser la matrice de confusion")
-    print("   • Tester avec différents seuils de probabilité")
-
+    print("\n🧠 Argumentaire pour mardi :")
+    print("  • Nous ne prédisons plus un simple 'achat', mais la capacité financière réelle.")
+    print("  • Le score de solvabilité pondère la réputation, la logistique et le volume d'affaires.")
 
 def main():
-    """Fonction principale."""
+    """Fonction principale d'entraînement du Scoring SolIA."""
     parser = argparse.ArgumentParser(
-        description="Entraîne le modèle de recommandation Olist"
+        description="Entraîne le modèle de scoring de solvabilité vendeur Olist"
     )
     parser.add_argument(
         '--data-dir',
@@ -141,39 +156,39 @@ def main():
     args = parser.parse_args()
     data_dir = Path(args.data_dir)
 
-    print("" + "=" * 60)
-    print("OLIST RECOMMENDATION SYSTEM - ENTRAÎNEMENT")
-    print("Master 2 - SEP")
-    print("" + "=" * 60)
+    print("\n" + "=" * 60)
+    print("🚀 SOLIA - SYSTÈME DE SCORING DE CRÉDIT VENDEUR")
+    print("Master 2 - SEP | Analyse de Solvabilité")
+    print("=" * 60)
 
-    print(f"Répertoire de données: {data_dir}")
+    print(f"📂 Répertoire de données: {data_dir}")
 
-    # 1. Vérifier/générer les données
+    # 1. Vérification des 6 bases (incluant paiements et vendeurs)
     if not check_data_availability(data_dir):
-        print("\n❌ Données manquantes. Options:")
-        print("   1. Télécharger les vraies données Olist")
+        print("\n❌ Erreur : Bases de données incomplètes pour le calcul de solvabilité.")
+        print("Veuillez vérifier que 'olist_order_payments_dataset.csv' et 'olist_sellers_dataset.csv' sont présents.")
         return 1
 
-    # 2. Entraîner le modèle
-    metrics = train_recommendation_model(data_dir)
+    # 2. Entraînement (Régression CA futur)
+    try:
+        metrics = train_recommendation_model(data_dir)
+    except Exception as e:
+        print(f"\n❌ Erreur lors de l'entraînement : {e}")
+        return 1
 
-    # 3. Afficher les résultats
+    # 3. Affichage des métriques de régression (R2, MAE)
     display_training_results(metrics)
 
-    # 4. Instructions de suivi
+    # 4. Instructions pour la démo de mardi
     print("\n" + "=" * 50)
-    print("PROCHAINES ÉTAPES")
+    print("🎯 PROCHAINES ÉTAPES POUR VOTRE PRÉSENTATION")
     print("" + "=" * 50)
-    print("1. Lancer l'API: uvicorn backend.app.main:app --reload")
-    print("2. Lancer le frontend: streamlit run frontend/app.py")
-    print("3. Tester les recommandations via l'interface web")
-    print("4. Analyser les features importantes")
-    print("5. Optimiser les hyperparamètres")
+    print("1. Lancer l'API : uv run uvicorn backend.app.main:app --reload")
+    print("2. Lancer le Dashboard : uv run streamlit run frontend/app.py")
+    print("3. Démo Live : Sélectionnez un vendeur et montrez son éligibilité au prêt.")
+    print("4. Justification : Expliquez comment la MAE sécurise la décision de crédit.")
 
-    print("\n✨ Entraînement terminé avec succès! ✨")
-
-
-
+    print("\n✨ Modèle de solvabilité prêt pour la mise en production !\n")
 
 if __name__ == "__main__":
     exit_code = main()

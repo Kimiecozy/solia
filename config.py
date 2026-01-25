@@ -44,6 +44,8 @@ class MLConfig:
     FEATURE_PIPELINE_FILE = MODELS_DIR / "feature_pipeline.joblib"
     CUSTOMER_FEATURES_FILE = PROCESSED_DATA_DIR / "customer_features.csv"
     PRODUCT_FEATURES_FILE = RAW_DATA_DIR / "olist_products_dataset.csv"
+    SELLER_FEATURES_FILE = PROCESSED_DATA_DIR / "seller_features.csv"
+    REVENUE_MODEL_FILE = MODELS_DIR / "revenue_prediction_model.joblib"
 
 # ==========================================
 # 🚀 API CONFIGURATION
@@ -88,8 +90,21 @@ class DataConfig:
         'orders': 'olist_orders_dataset.csv',
         'order_items': 'olist_order_items_dataset.csv',
         'products': 'olist_products_dataset.csv',
-        'reviews': 'olist_order_reviews_dataset.csv'
+        'reviews': 'olist_order_reviews_dataset.csv',
+        'payments': 'olist_order_payments_dataset.csv',
+        'sellers': 'olist_sellers_dataset.csv'
     }
+
+
+    # Nouvelles features pour le scoring vendeur
+    SELLER_FEATURES = [
+        'total_revenue',
+        'avg_review_score',
+        'late_rate',
+        'avg_installments',
+        'active_months',
+        'solvability_score' # 👈 Ta nouvelle colonne
+    ]
 
     # Features pour le modèle de recommandation
     CUSTOMER_FEATURES = [

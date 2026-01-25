@@ -394,6 +394,48 @@ class RecommendationFeatureEngine:
         self.product_engineer = ProductFeatureEngineer()
         self.is_fitted = False
 
+    def create_seller_features(self, sellers, orders, items, payments, reviews, products):
+        print("🏗️ Fusion et calcul de la solvabilité par vendeur...")
+
+        # Ta logique de merge
+        df = items.merge(orders, on='order_id')
+        df = df.merge(payments, on='order_id', how='left')
+        df = df.merge(reviews, on='order_id', how='left')
+        df = df.merge(products, on='product_id', how='left')
+
+        # Calcul du taux de retard
+        df['is_late'] = (df['order_delivered_customer_date'] > df['order_estimated_delivery_date']).astype(int)
+
+        # Agrégation par SELLER_ID
+        seller_stats = df.groupby('seller_id').agg({
+            'price': 'sum',
+            'review_score': 'mean',
+            'is_late': 'mean',
+            'payment_installments': 'mean',
+            'order_purchase_timestamp': ['min', 'max']
+        })
+
+        seller_stats.columns = ['total_revenue', 'avg_review_score', 'late_rate', 'avg_installments', 'first_order', 'last_order']
+
+        # Calcul de l'ancienneté
+        seller_stats['active_months'] = ((seller_stats['last_order'] - seller_stats['first_order']).dt.days / 30).clip(lower=1)
+        
+        # Formule de solvabilité
+        norm_revenue = (seller_stats['total_revenue'] - seller_stats['total_revenue'].min()) / (seller_stats['total_revenue'].max() - seller_stats['total_revenue'].min())
+        norm_reviews = seller_stats['avg_review_score'] / 5
+        norm_punctuality = 1 - seller_stats['late_rate']
+
+        seller_stats['solvability_score'] = (
+            (norm_revenue * 40) + 
+            (norm_reviews * 30) + 
+            (norm_punctuality * 30)
+        ).round(2)
+
+        # Ajout du state (car ta collègue a mis seller_id en index)
+        seller_stats = seller_stats.join(sellers['seller_state'], how='left')
+
+        return seller_stats
+
     def fit(self, customer_data: pd.DataFrame, product_data: pd.DataFrame):
         """Entraîne les transformeurs sur les données."""
         print("   Entraînement des feature engineers...")
@@ -498,6 +540,7 @@ class RecommendationFeatureEngine:
         print(f"   {len(customer_features)} clients traités")
         print(f"   {len(customer_features.columns)} features créées")
         return customer_features
+    
 
     def create_interaction_matrix(self, orders_df: pd.DataFrame,
                                   order_items_df: pd.DataFrame) -> pd.DataFrame:
@@ -552,33 +595,38 @@ class RecommendationFeatureEngine:
         return interactions
 
 
-def load_and_prepare_data(raw_data_dir) -> Tuple[pd.DataFrame, pd.DataFrame,
-pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def load_and_prepare_data(raw_data_dir) -> Tuple:
     """
-    Charge et prépare toutes les données nécessaires.
-
-    DATASETS OLIST:
-    1. sellers: Informations vendeurs (ID, localisation)
-    2. orders: Commandes (statut, dates)
-    3. order_items: Détails des achats (produit, prix)
-    4. products: Catalogue produits (catégorie, dimensions)
-    5. reviews: Avis clients (score, commentaires)
-    6. payements : Informations payements (type, montant)
-
-    À SAVOIR:
-    - Ces données sont issues d'un e-commerce brésilien réel
-    - 100k commandes sur ~2 ans (2016-2018)
-    - 73 catégories de produits
+    Charge les 6 bases nécessaires au Scoring Vendeur.
+    Version optimisée avec les colonnes spécifiques.
     """
-    print("Chargement des données...")
+    print("📂 Chargement des données pour le Scoring Vendeur...")
 
-    #customers = pd.read_csv(raw_data_dir / 'olist_customers_dataset.csv')
-    sellers = pd.read_csv(raw_data_dir / 'olist_sellers_dataset.csv')
-    orders = pd.read_csv(raw_data_dir / 'olist_orders_dataset.csv')
-    order_items = pd.read_csv(raw_data_dir / 'olist_order_items_dataset.csv')
-    products = pd.read_csv(raw_data_dir / 'olist_products_dataset.csv')
-    reviews = pd.read_csv(raw_data_dir/ 'olist_order_reviews_dataset.csv')
-    payements = pd.read_csv(raw_data_dir / 'olist_order_payements_dataset.csv')
+
+    # 1. Sellers (pour le state)
+    sellers = pd.read_csv(raw_data_dir / 'olist_sellers_dataset.csv', 
+                         usecols=['seller_id', 'seller_state']).set_index('seller_id')
+    
+    # 2. Orders (pour les dates et le statut)
+    orders = pd.read_csv(raw_data_dir / 'olist_orders_dataset.csv',
+                        usecols=['order_id', 'order_status', 'order_purchase_timestamp', 
+                                'order_delivered_customer_date', 'order_estimated_delivery_date'])
+    
+    # 3. Items (pour le prix et le lien vendeur/produit)
+    items = pd.read_csv(raw_data_dir / 'olist_order_items_dataset.csv',
+                       usecols=['seller_id', 'order_id', 'product_id', 'price', 'freight_value'])
+    
+    # 4. Payments (pour les mensualités / installments)
+    payments = pd.read_csv(raw_data_dir / 'olist_order_payments_dataset.csv',
+                          usecols=['order_id', 'payment_installments'])
+    
+    # 5. Reviews (pour la satisfaction client)
+    reviews = pd.read_csv(raw_data_dir / 'olist_order_reviews_dataset.csv',
+                         usecols=['order_id', 'review_score'])
+    
+    # 6. Products (pour la catégorie)
+    products = pd.read_csv(raw_data_dir / 'olist_products_dataset.csv',
+                          usecols=['product_id', 'product_category_name'])
 
     # Indexation des id pour plus de lisibilité
     sellers['seller_id2'] = pd.factorize(sellers['seller_id'])[0] + 1
@@ -593,22 +641,17 @@ pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     order_items = order_items.merge( products[['product_id', 'product_id2']],on='product_id',how='left')
 
     # Conversion des dates (important pour calculer la récence!)
-    date_columns = ['order_purchase_timestamp', 'order_approved_at',
-                    'order_delivered_carrier_date', 'order_delivered_customer_date',
-                    'shipping_limit_date','review_creation_date',
-                    'review_answer_timestamp']
+    date_columns = ['order_purchase_timestamp',
+                    'order_delivered_customer_date','order_estimated_delivery_date']
 
     for col in date_columns:
         if col in orders.columns:
             orders[col] = pd.to_datetime(orders[col])
-        elif col in reviews.columns:
-            reviews[col] = pd.to_datetime(reviews[col])
-        elif col in order_items[col]:
-            order_items[col] = pd.to_datetime(order_items[col])
 
     print(f" {len(orders)} commandes, "
           f"{len(order_items)} items, {len(products)} produits, {len(reviews)} avis")
 
+    # L'ORDRE : create_seller_features(self, sellers, orders, items, payments, reviews, products)
     return sellers, orders, order_items, products, reviews, payements
 
 
