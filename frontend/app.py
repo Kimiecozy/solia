@@ -1,6 +1,6 @@
 # ===============================================
 # 🚀 OLIST RECOMMENDATION SYSTEM - STREAMLIT APP
-# Master 2 - SEP
+# Master 2 - SEP (AVEC CHATBOT INTÉGRÉ)
 # ===============================================
 
 """
@@ -11,6 +11,7 @@ Cette application web permet de:
 - Visualiser les performances du modèle
 - Explorer les données et résultats
 - Démontrer le système complet aux étudiants
+- 🤖 CHATBOT pour requêtes naturelles sur solvabilité/revenue
 
 Architecture:
 - Streamlit pour l'interface utilisateur
@@ -26,6 +27,8 @@ import joblib
 import sys
 from pathlib import Path
 import os
+import re
+import requests
 
 # Ajouter le répertoire racine au PYTHONPATH
 sys.path.append(str(Path(__file__).parent.parent))
@@ -36,6 +39,133 @@ from config import MLConfig
 # Configuration de l'API
 API_BASE_URL = "http://localhost:8000/api/v1"
 
+# ========================================
+# 🤖 CHATBOT FONCTIONS (NOUVEAU)
+# ========================================
+def chatbot_parse_query(query: str):
+    """Parse les requêtes naturelles"""
+    query_lower = query.lower()
+    
+    # Solvabilité
+    solv_match = re.search(r'solvabilit[éey]?\s*(>|<|=|plus|moins|superieur|inferieur)\s*(\d+)', query_lower)
+    if solv_match:
+        op, value = solv_match.groups()
+        value = float(value)
+        if op in ['plus', '>', 'superieur']: op = '>'
+        elif op in ['moins', '<', 'inferieur']: op = '<'
+        else: op = '='
+        return {'type': 'solvability', 'op': op, 'value': value}
+    
+    # Revenue
+    rev_match = re.search(r'(revenu[sse]?|ca|chiffre)\s*(>|<|=|plus|moins|superieur|inferieur)\s*(\d+(?:[kKmM]?)?)', query_lower)
+    if rev_match:
+        _, op, value_str = rev_match.groups()
+        value = float(value_str.replace('k', '000').replace('K', '000').replace('m', '000000').replace('M', '000000'))
+        if op in ['plus', '>', 'superieur']: op = '>'
+        elif op in ['moins', '<', 'inferieur']: op = '<'
+        else: op = '='
+        return {'type': 'revenue', 'op': op, 'value': value}
+    
+    # Top/Bottom
+    if 'top' in query_lower or 'meilleur' in query_lower or 'plus haut' in query_lower:
+        n = re.search(r'top\s*(\d+)', query_lower)
+        if not n:
+            n = re.search(r'(\d+)\s*(meilleur|top)', query_lower)
+        return {'type': 'top_solv', 'n': int(n.group(1)) if n else 5}
+    
+    if 'pire' in query_lower or 'moins bon' in query_lower or 'plus bas' in query_lower:
+        n = re.search(r'(\d+)', query_lower)
+        return {'type': 'bottom_solv', 'n': int(n.group(1)) if n else 5}
+    
+    # Moyenne
+    if 'moyenne' in query_lower or 'moy' in query_lower:
+        if 'solv' in query_lower:
+            return {'type': 'avg_solv'}
+        if 'rev' in query_lower or 'ca' in query_lower:
+            return {'type': 'avg_rev'}
+    
+    # Total
+    if 'total' in query_lower:
+        if 'rev' in query_lower or 'ca' in query_lower:
+            return {'type': 'total_rev'}
+    
+    return {'type': 'stats'}
+
+def chatbot_execute_query(df: pd.DataFrame, query_dict: dict):
+    """Exécute la requête chatbot"""
+    if query_dict['type'] == 'solvability':
+        if query_dict['op'] == '>':
+            mask = df['solvability_score'] > query_dict['value']
+        elif query_dict['op'] == '<':
+            mask = df['solvability_score'] < query_dict['value']
+        else:
+            mask = df['solvability_score'] == query_dict['value']
+        
+        result = df[mask][['seller_name', 'solvability_score', 'total_revenue']].reset_index()
+        result = result.round(2)
+        return result, f"**{len(result)} vendeurs** avec solvabilité {query_dict['op']} {query_dict['value']}"
+    
+    elif query_dict['type'] == 'revenue':
+        if query_dict['op'] == '>':
+            mask = df['total_revenue'] > query_dict['value']
+        elif query_dict['op'] == '<':
+            mask = df['total_revenue'] < query_dict['value']
+        else:
+            mask = df['total_revenue'] == query_dict['value']
+        
+        result = df[mask][['seller_name', 'solvability_score', 'total_revenue']].reset_index()
+        result = result.round(2)
+        return result, f"**{len(result)} vendeurs** avec revenue {query_dict['op']} {query_dict['value']:,.0f} R$"
+    
+    elif query_dict['type'] == 'top_solv':
+        result = df.nlargest(query_dict['n'], 'solvability_score')[['seller_name', 'solvability_score', 'total_revenue']].reset_index()
+        result = result.round(2)
+        return result, f"**Top {query_dict['n']} vendeurs** par solvabilité"
+    
+    elif query_dict['type'] == 'bottom_solv':
+        result = df.nsmallest(query_dict['n'], 'solvability_score')[['seller_name', 'solvability_score', 'total_revenue']].reset_index()
+        result = result.round(2)
+        return result, f"**Bottom {query_dict['n']} vendeurs** par solvabilité"
+    
+    elif query_dict['type'] == 'avg_solv':
+        avg = df['solvability_score'].mean()
+        stats = pd.DataFrame([{
+            'Moyenne solvabilité': round(avg, 2),
+            'Min': round(df['solvability_score'].min(), 2),
+            'Max': round(df['solvability_score'].max(), 2)
+        }])
+        return stats, "📊 **Statistiques solvabilité**"
+    
+    elif query_dict['type'] == 'avg_rev':
+        avg = df['total_revenue'].mean()
+        stats = pd.DataFrame([{
+            'Moyenne revenue': round(avg, 2),
+            'Min': round(df['total_revenue'].min(), 2),
+            'Max': round(df['total_revenue'].max(), 2)
+        }])
+        return stats, "📊 **Statistiques revenue**"
+    
+    elif query_dict['type'] == 'total_rev':
+        total = df['total_revenue'].sum()
+        stats = pd.DataFrame([{
+            'Total revenue': round(total, 2),
+            'Nombre vendeurs': len(df)
+        }])
+        return stats, "💰 **Revenue total**"
+    
+    else:
+        stats = pd.DataFrame([{
+            'Nb vendeurs': len(df),
+            'Solvabilité moyenne': round(df['solvability_score'].mean(), 2),
+            'Meilleure solvabilité': round(df['solvability_score'].max(), 2),
+            'Total revenue': round(df['total_revenue'].sum(), 2)
+        }])
+        return stats, "📊 **Statistiques générales**"
+
+# ========================================
+# FIN CHATBOT
+# ========================================
+
 # 2. On utilise le préfixe MLConfig. pour accéder aux chemins
 @st.cache_data
 def load_seller_data():
@@ -43,8 +173,6 @@ def load_seller_data():
     # Ajouter le mapping name → id
     df['seller_name'] = [f"vendeur{i+1}" for i in range(len(df))]
     return df
-
-
 
 @st.cache_resource
 def load_credit_model():
@@ -96,14 +224,16 @@ def main():
     
         
         st.markdown("---")
-        page = st.radio("Navigation", ["🎯 Verdict Crédit", "📊 Analyse du Modèle"])
+        page = st.radio("Navigation", ["🎯 Verdict Crédit", "📊 Analyse du Modèle", "🤖 Chatbot"])
 
     vendeur = df_sellers.loc[seller_id]
 
     if page == "🎯 Verdict Crédit":
-        show_credit_scoring_page(vendeur)
-    else:
+        show_credit_scoring_page(vendeur, seller_name)
+    elif page == "📊 Analyse du Modèle":
         show_model_analysis_page()
+    elif page == "🤖 Chatbot":
+        show_chatbot_page()
 
 
 def show_model_analysis_page():
@@ -151,12 +281,10 @@ def show_model_analysis_page():
         st.write("L'incertitude moyenne sur le CA prédit.")
 
 
+def show_credit_scoring_page(vendeur, seller_name):
+    st.header(f"Analyse du Vendeur : **{seller_name}**")
+    st.caption(f"ID: {vendeur.name[:8]}...")
 
-def show_credit_scoring_page(vendeur):
-    st.header(f"Analyse du Vendeur : **{vendeur['seller_name']}** (ID: {vendeur.name[:8]}...)")
-
-
-    
     # 1. Le Score de Solvabilité
     score = vendeur['solvability_score']
     
@@ -190,6 +318,68 @@ def show_credit_scoring_page(vendeur):
     
     st.write(f"Notre IA estime que ce vendeur peut générer **{prediction:.2f} R$** de revenus futurs.")
     st.info(f"Mensualité maximale conseillée : **{(prediction * 0.3):.2f} R$** (30% du CA prédit)")
+
+
+def show_chatbot_page():
+    """Page du chatbot avec historique"""
+    st.header("🤖 Assistant Intelligent - Analyse Vendeurs")
+    st.markdown("Pose tes questions en langage naturel sur les vendeurs !")
+    
+    # Exemples de requêtes
+    with st.expander("💡 Exemples de questions"):
+        st.markdown("""
+        **Filtres solvabilité:**
+        - "vendeurs avec solvabilité > 50"
+        - "solvabilité inférieur à 40"
+        
+        **Filtres revenue:**
+        - "revenue supérieur à 10000"
+        - "CA > 50k"
+        
+        **Top/Bottom:**
+        - "top 10 solvabilité"
+        - "les 5 pires vendeurs"
+        
+        **Statistiques:**
+        - "moyenne solvabilité"
+        - "total revenue"
+        - "stats" (statistiques générales)
+        """)
+    
+    # Initialiser l'historique
+    if "chat_messages" not in st.session_state:
+        st.session_state.chat_messages = []
+    
+    # Afficher l'historique
+    for message in st.session_state.chat_messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["text"])
+            if "dataframe" in message and message["dataframe"] is not None:
+                st.dataframe(message["dataframe"], use_container_width=True)
+    
+    # Input utilisateur
+    if prompt := st.chat_input("Pose ta question... (ex: 'vendeurs solvabilité > 50')"):
+        # Ajouter message utilisateur
+        st.session_state.chat_messages.append({"role": "user", "text": prompt, "dataframe": None})
+        
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        
+        # Traiter la requête
+        with st.chat_message("assistant"):
+            with st.spinner("Analyse en cours..."):
+                query_dict = chatbot_parse_query(prompt)
+                result_df, title = chatbot_execute_query(df_sellers, query_dict)
+            
+            st.markdown(f"### {title}")
+            st.dataframe(result_df, use_container_width=True)
+            
+            # Ajouter à l'historique
+            st.session_state.chat_messages.append({
+                "role": "assistant", 
+                "text": title, 
+                "dataframe": result_df
+            })
 
 def show_recommendations_page():
     """Page principale de génération de recommandations."""
@@ -229,7 +419,7 @@ def show_recommendations_page():
         with st.spinner("Génération des recommandations..."):
             recommendations_data = get_recommendations(customer_id, n_recommendations)
 
-        if recommendations_data:
+        if recommendations:
             display_recommendations(recommendations_data)
         else:
             st.error("Impossible de générer les recommandations")
@@ -448,4 +638,3 @@ def show_data_analysis_page():
 
 if __name__ == "__main__":
     main()
-    os.system('streamlit run app.py')
