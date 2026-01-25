@@ -563,7 +563,7 @@ pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     3. order_items: Détails des achats (produit, prix)
     4. products: Catalogue produits (catégorie, dimensions)
     5. reviews: Avis clients (score, commentaires)
-    6. payements : 
+    6. payements : Informations payements (type, montant)
 
     À SAVOIR:
     - Ces données sont issues d'un e-commerce brésilien réel
