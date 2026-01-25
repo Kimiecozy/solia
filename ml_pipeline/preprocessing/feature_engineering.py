@@ -605,7 +605,7 @@ def load_and_prepare_data(raw_data_dir) -> Tuple:
 
     # 1. Sellers (pour le state)
     sellers = pd.read_csv(raw_data_dir / 'olist_sellers_dataset.csv', 
-                         usecols=['seller_id', 'seller_state']).set_index('seller_id')
+                         usecols=['seller_id', 'seller_state'])
     
     # 2. Orders (pour les dates et le statut)
     orders = pd.read_csv(raw_data_dir / 'olist_orders_dataset.csv',
@@ -654,40 +654,3 @@ def load_and_prepare_data(raw_data_dir) -> Tuple:
     # L'ORDRE : create_seller_features(self, sellers, orders, items, payments, reviews, products)
     return sellers, orders, order_items, products, reviews, payements
 
-
-# ============================================
-# GUIDE D'UTILISATION POUR L'ÉTUDIANT
-# ============================================
-"""
-COMMENT EXPLORER CE CODE:
-
-1. COMMENCER PAR LES BASES:
-   - Lire les features implémentées (marquées dans les commentaires)
-   - Comprendre RFM: Récence, Fréquence, Montant
-   - Observer le processus fit() -> transform()
-
-2. EXPÉRIMENTER:
-   - Décommenter les features avancées
-   - Modifier les paramètres (ex: q=4 -> q=5 dans les quartiles)
-   - Ajouter vos propres features (exercices proposés)
-
-3. ANALYSER:
-   - Utiliser feature_importances_ du modèle pour voir quelles features sont utiles
-   - Créer des visualisations (histogrammes, boxplots) des features
-   - Comparer les performances avec/sans certaines features
-
-4. ALLER PLUS LOIN:
-   - Implémenter la saisonnalité (mois, jour de la semaine)
-   - Créer des features d'interaction (client_segment × favorite_category)
-   - Tester des transformations (log, sqrt) sur les features numériques
-   - Implémenter du feature selection automatique
-
-RESSOURCES:
-   - Documentation scikit-learn: sklearn.preprocessing
-   - Livre: "Feature Engineering for Machine Learning" (Alice Zheng)
-   - Kaggle: "Feature Engineering Techniques"
-
-OBJECTIF FINAL:
-   Comprendre que de bonnes features > algorithme complexe!
-   80% du succès en ML vient de la qualité des features.
-"""
