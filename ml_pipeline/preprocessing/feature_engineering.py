@@ -573,6 +573,8 @@ pd.DataFrame, pd.DataFrame, pd.DataFrame]:
 
     #customers = pd.read_csv(raw_data_dir / 'olist_customers_dataset.csv')
     sellers = pd.read_csv(raw_data_dir / 'olist_sellers_dataset.csv')
+    sellers = sellers.set_index('seller_id')
+    
     orders = pd.read_csv(raw_data_dir / 'olist_orders_dataset.csv')
     order_items = pd.read_csv(raw_data_dir / 'olist_order_items_dataset.csv')
     products = pd.read_csv(raw_data_dir / 'olist_products_dataset.csv')
