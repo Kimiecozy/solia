@@ -25,6 +25,7 @@ import plotly.express as px
 import joblib
 import sys
 from pathlib import Path
+import os
 
 # Ajouter le répertoire racine au PYTHONPATH
 sys.path.append(str(Path(__file__).parent.parent))
@@ -38,8 +39,12 @@ API_BASE_URL = "http://localhost:8000/api/v1"
 # 2. On utilise le préfixe MLConfig. pour accéder aux chemins
 @st.cache_data
 def load_seller_data():
-    """Charge la base des vendeurs générée par le train_model.py."""
-    return pd.read_csv(MLConfig.SELLER_FEATURES_FILE, index_col='seller_id')
+    df = pd.read_csv(MLConfig.SELLER_FEATURES_FILE, sep=";", index_col="seller_id")
+    # Ajouter le mapping name → id
+    df['seller_name'] = [f"vendeur{i+1}" for i in range(len(df))]
+    return df
+
+
 
 @st.cache_resource
 def load_credit_model():
@@ -82,8 +87,13 @@ def main():
 
     with st.sidebar:
         st.markdown("## 🔍 Sélection")
-        # Sélection du vendeur via l'index (ID)
-        seller_id = st.selectbox("Choisir un Vendeur", options=df_sellers.index)
+
+        df_sellers = load_seller_data()
+        name_to_id = {df_sellers.loc[idx, 'seller_name']: idx for idx in df_sellers.index}
+    
+        seller_name = st.selectbox("Choisir un Vendeur", options=list(name_to_id.keys()))
+        seller_id = name_to_id[seller_name]
+    
         
         st.markdown("---")
         page = st.radio("Navigation", ["🎯 Verdict Crédit", "📊 Analyse du Modèle"])
@@ -143,7 +153,9 @@ def show_model_analysis_page():
 
 
 def show_credit_scoring_page(vendeur):
-    st.header(f"Analyse du Vendeur : {vendeur.name}")
+    st.header(f"Analyse du Vendeur : **{vendeur['seller_name']}** (ID: {vendeur.name[:8]}...)")
+
+
     
     # 1. Le Score de Solvabilité
     score = vendeur['solvability_score']
@@ -436,3 +448,4 @@ def show_data_analysis_page():
 
 if __name__ == "__main__":
     main()
+    os.system('streamlit run app.py')
