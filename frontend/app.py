@@ -20,60 +20,35 @@ Architecture:
 """
 
 import streamlit as st
-import requests
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
-from datetime import datetime, timedelta
+import joblib
 import sys
 from pathlib import Path
-import json
-import time
-
-# Configuration de la page
-st.set_page_config(
-    page_title="🛒 Olist Recommendation System",
-    page_icon="🛒",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
 # Ajouter le répertoire racine au PYTHONPATH
 sys.path.append(str(Path(__file__).parent.parent))
 
+# 1. On importe la classe MLConfig au lieu des variables directes
+from config import MLConfig
+
 # Configuration de l'API
 API_BASE_URL = "http://localhost:8000/api/v1"
 
-# Cache Streamlit pour optimiser les performances
-@st.cache_data(ttl=300)  # Cache pendant 5 minutes
-def get_customers():
-    """Récupère la liste des clients depuis l'API."""
-    try:
-        response = requests.get(f"{API_BASE_URL}/customers")
-        if response.status_code == 200:
-            return response.json()
-        else:
-            st.error(f"Erreur API: {response.status_code}")
-            return []
-    except requests.exceptions.ConnectionError:
-        st.error("🔌 Impossible de se connecter à l'API. Assurez-vous que le serveur FastAPI est démarré.")
-        return []
-    except Exception as e:
-        st.error(f"❌ Erreur: {e}")
-        return []
+# 2. On utilise le préfixe MLConfig. pour accéder aux chemins
+@st.cache_data
+def load_seller_data():
+    """Charge la base des vendeurs générée par le train_model.py."""
+    return pd.read_csv(MLConfig.SELLER_FEATURES_FILE, index_col='seller_id')
 
-@st.cache_data(ttl=300)
-def get_model_info():
-    """Récupère les informations du modèle depuis l'API."""
-    try:
-        response = requests.get(f"{API_BASE_URL}/model/info")
-        if response.status_code == 200:
-            return response.json()
-        else:
-            return None
-    except Exception as e:
-        st.error(f"❌ Erreur lors de la récupération des infos du modèle: {e}")
-        return None
+@st.cache_resource
+def load_credit_model():
+    """Charge le modèle de prédiction de revenus."""
+    return joblib.load(MLConfig.REVENUE_MODEL_FILE)
+
+# Initialisation des données
+df_sellers = load_seller_data()
+model_revenue = load_credit_model()
 
 def get_recommendations(customer_id, n_recommendations=10):
     """Obtient les recommandations pour un client."""
@@ -102,56 +77,107 @@ def check_api_health():
         return False
 
 def main():
-    """Interface principale de l'application Streamlit."""
+    st.title("🏦 SolIA - Scoring de Crédit Vendeur")
+    st.markdown("### Analyse de solvabilité pour les vendeurs Olist")
 
-    # Header principal
+    with st.sidebar:
+        st.markdown("## 🔍 Sélection")
+        # Sélection du vendeur via l'index (ID)
+        seller_id = st.selectbox("Choisir un Vendeur", options=df_sellers.index)
+        
+        st.markdown("---")
+        page = st.radio("Navigation", ["🎯 Verdict Crédit", "📊 Analyse du Modèle"])
+
+    vendeur = df_sellers.loc[seller_id]
+
+    if page == "🎯 Verdict Crédit":
+        show_credit_scoring_page(vendeur)
+    else:
+        show_model_analysis_page()
+
+
+def show_model_analysis_page():
+    """Affiche les performances techniques du modèle de régression."""
+    st.header("📊 Analyse technique du modèle")
+
+    # 1. Explication des métriques
     st.markdown("""
-    # 🛒 Olist Recommendation System
-    ## Master 2 - SEP
-
-    **Interface de démonstration du système de recommandation e-commerce**
+    Le modèle utilise un algorithme **Random Forest Regressor** pour prédire le chiffre d'affaires 
+    futur d'un vendeur en se basant sur son historique de performance.
     """)
 
-    # Vérification de la connexion API
-    if not check_api_health():
-        st.error("""
-        🔌 **Connexion à l'API impossible**
+    # 2. Importance des Features (Le pourquoi du score)
+    st.subheader("🔍 Importance des critères")
+    
+    # On récupère l'importance des variables directement depuis le modèle chargé
+    importances = model_revenue.feature_importances_
+    features = ['Note Moyenne', 'Taux de Retard', 'Mensualités Moy.', 'Ancienneté', 'Score de Solvabilité']
+    
+    df_importance = pd.DataFrame({
+        'Critère': features,
+        'Importance': importances
+    }).sort_values(by='Importance', ascending=True)
 
-        **Comment résoudre:**
-        1. Démarrez le serveur FastAPI: `uvicorn backend.app.main:app --reload`
-        2. Vérifiez que le serveur tourne sur http://localhost:8000
-        3. Consultez les logs pour les erreurs éventuelles
-        """)
-        st.stop()
+    fig = px.bar(
+        df_importance, 
+        x='Importance', 
+        y='Critère', 
+        orientation='h',
+        title="Qu'est-ce qui influence le plus la prédiction ?",
+        color_discrete_sequence=['#2ecc71']
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
-    # Sidebar pour la navigation
-    with st.sidebar:
-        st.markdown("## 📋 Navigation")
-        page = st.selectbox(
-            "Choisir une page",
-            [
-                "🎯 Recommandations",
-                "📊 Performance du Modèle",
-                "🔍 Analyse des Données",
-            ]
-        )
+    # 3. Rappel des performances globales (Métriques de l'entraînement)
+    st.subheader("🎯 Précision du système")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.metric("R² Score (Fiabilité)", "0.95", help="Plus le score est proche de 1, plus le modèle est précis.")
+        st.write("Le modèle explique 95% des variations de revenus.")
+        
+    with col2:
+        st.metric("Erreur Moyenne (MAE)", "1779 R$", help="Écart moyen entre la prédiction et la réalité.")
+        st.write("L'incertitude moyenne sur le CA prédit.")
 
-        st.markdown("---")
-        st.markdown("### 🔧 Configuration")
 
-        # Status API
-        if check_api_health():
-            st.success("✅ API connectée")
-        else:
-            st.error("❌ API déconnectée")
 
-    # Routage vers les différentes pages
-    if page == "🎯 Recommandations":
-        show_recommendations_page()
-    elif page == "📊 Performance du Modèle":
-        show_model_performance_page()
-    elif page == "🔍 Analyse des Données":
-        show_data_analysis_page()
+def show_credit_scoring_page(vendeur):
+    st.header(f"Analyse du Vendeur : {vendeur.name}")
+    
+    # 1. Le Score de Solvabilité
+    score = vendeur['solvability_score']
+    
+    if score >= 75:
+        st.success(f"### ✅ ÉLIGIBLE AU PRÊT (Score : {score}/100)")
+        st.balloons()
+    elif score >= 50:
+        st.warning(f"### ⚠️ DOSSIER À ÉTUDIER (Score : {score}/100)")
+    else:
+        st.error(f"### ❌ PRÊT REFUSÉ (Score : {score}/100)")
+
+    # 2. Indicateurs Clés
+    col1, col2, col3 = st.columns(3)
+    col1.metric("CA Total", f"{vendeur['total_revenue']:.2f} R$")
+    col2.metric("Note Moyenne", f"{vendeur['avg_review_score']:.1f} / 5")
+    col3.metric("Taux de Retard", f"{vendeur['late_rate']*100:.1f} %")
+
+    st.markdown("---")
+    
+    # 3. Prédiction du CA Futur
+    st.subheader("🔮 Capacité de Remboursement")
+    # Préparer les données pour le modèle (doit être le même ordre que dans train_model.py)
+    input_data = pd.DataFrame([[
+        vendeur['avg_review_score'], 
+        vendeur['late_rate'], 
+        vendeur['avg_installments'], 
+        vendeur['active_months'], 
+        vendeur['solvability_score']
+    ]])
+    prediction = model_revenue.predict(input_data)[0]
+    
+    st.write(f"Notre IA estime que ce vendeur peut générer **{prediction:.2f} R$** de revenus futurs.")
+    st.info(f"Mensualité maximale conseillée : **{(prediction * 0.3):.2f} R$** (30% du CA prédit)")
 
 def show_recommendations_page():
     """Page principale de génération de recommandations."""
