@@ -558,11 +558,12 @@ pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     Charge et prépare toutes les données nécessaires.
 
     DATASETS OLIST:
-    1. customers: Informations clients (ID, localisation)
+    1. sellers: Informations vendeurs (ID, localisation)
     2. orders: Commandes (statut, dates)
     3. order_items: Détails des achats (produit, prix)
     4. products: Catalogue produits (catégorie, dimensions)
     5. reviews: Avis clients (score, commentaires)
+    6. payements : 
 
     À SAVOIR:
     - Ces données sont issues d'un e-commerce brésilien réel
@@ -573,31 +574,42 @@ pd.DataFrame, pd.DataFrame, pd.DataFrame]:
 
     #customers = pd.read_csv(raw_data_dir / 'olist_customers_dataset.csv')
     sellers = pd.read_csv(raw_data_dir / 'olist_sellers_dataset.csv')
-    sellers = sellers.set_index('seller_id')
-    
     orders = pd.read_csv(raw_data_dir / 'olist_orders_dataset.csv')
     order_items = pd.read_csv(raw_data_dir / 'olist_order_items_dataset.csv')
     products = pd.read_csv(raw_data_dir / 'olist_products_dataset.csv')
+    reviews = pd.read_csv(raw_data_dir/ 'olist_order_reviews_dataset.csv')
+    payements = pd.read_csv(raw_data_dir / 'olist_order_payements_dataset.csv')
 
-    # Reviews optionnelles
-    try:
-        reviews = pd.read_csv(raw_data_dir / 'olist_order_reviews_dataset.csv')
-    except FileNotFoundError:
-        print("   Fichier reviews non trouvé")
-        reviews = pd.DataFrame(columns=['review_id', 'order_id', 'review_score'])
+    # Indexation des id pour plus de lisibilité
+    sellers['seller_id2'] = pd.factorize(sellers['seller_id'])[0] + 1
+    order_items = order_items.merge( sellers[['seller_id', 'seller_id2']],on='seller_id',how='left')
+
+    orders['order_id2'] = pd.factorize(orders['order_id'])[0] + 1
+    order_items = order_items.merge( orders[['order_id', 'order_id2']],on='order_id',how='left')
+    reviews = reviews.merge( orders[['order_id', 'order_id2']],on='order_id',how='left')
+    payements = payements.merge( orders[['order_id', 'order_id2']],on='order_id',how='left')
+
+    products['product_id2'] = pd.factorize(products['product_id'])[0] + 1
+    order_items = order_items.merge( products[['product_id', 'product_id2']],on='product_id',how='left')
 
     # Conversion des dates (important pour calculer la récence!)
     date_columns = ['order_purchase_timestamp', 'order_approved_at',
-                    'order_delivered_carrier_date', 'order_delivered_customer_date']
+                    'order_delivered_carrier_date', 'order_delivered_customer_date',
+                    'shipping_limit_date','review_creation_date',
+                    'review_answer_timestamp']
 
     for col in date_columns:
         if col in orders.columns:
             orders[col] = pd.to_datetime(orders[col])
+        elif col in reviews.columns:
+            reviews[col] = pd.to_datetime(reviews[col])
+        elif col in order_items[col]:
+            order_items[col] = pd.to_datetime(order_items[col])
 
     print(f" {len(orders)} commandes, "
           f"{len(order_items)} items, {len(products)} produits, {len(reviews)} avis")
 
-    return sellers, orders, order_items, products, reviews
+    return sellers, orders, order_items, products, reviews, payements
 
 
 # ============================================
