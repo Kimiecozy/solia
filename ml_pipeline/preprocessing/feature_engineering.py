@@ -653,5 +653,5 @@ def load_and_prepare_data(raw_data_dir) -> Tuple:
           f"{len(items)} items, {len(products)} produits, {len(reviews)} avis")
 
     # L'ORDRE : create_seller_features(self, sellers, orders, items, payments, reviews, products)
-    return sellers, orders, items, products, reviews, payments
+    return sellers, orders, items, payments, reviews, products
 
