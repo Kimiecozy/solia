@@ -40,6 +40,7 @@ from pathlib import Path
 
 # Ajouter le répertoire parent au PYTHONPATH
 sys.path.append(str(Path(__file__).parent.parent.parent))
+from config import MLConfig
 
 
 class CustomerFeatureEngineer(BaseEstimator, TransformerMixin):
@@ -398,24 +399,24 @@ class RecommendationFeatureEngine:
         print("🏗️ Fusion et calcul de la solvabilité par vendeur...")
 
         # Ta logique de merge
-        df = items.merge(orders, on='order_id')
-        df = df.merge(payments, on='order_id', how='left')
-        df = df.merge(reviews, on='order_id', how='left')
-        df = df.merge(products, on='product_id', how='left')
+        df = items.merge(orders, on='order_id2')
+        df = df.merge(payments, on='order_id2', how='left')
+        df = df.merge(reviews, on='order_id2', how='left')
+        df = df.merge(products, on='product_id2', how='left')
 
         # Calcul du taux de retard
         df['is_late'] = (df['order_delivered_customer_date'] > df['order_estimated_delivery_date']).astype(int)
 
-        # Agrégation par SELLER_ID
-        seller_stats = df.groupby('seller_id').agg({
+        # Agrégation par SELLER_ID2
+        seller_stats = df.groupby('seller_id2').agg({
             'price': 'sum',
             'review_score': 'mean',
             'is_late': 'mean',
             'payment_installments': 'mean',
             'order_purchase_timestamp': ['min', 'max']
-        })
+        }).reset_index()
 
-        seller_stats.columns = ['total_revenue', 'avg_review_score', 'late_rate', 'avg_installments', 'first_order', 'last_order']
+        seller_stats.columns = ['seller_id2','total_revenue', 'avg_review_score', 'late_rate', 'avg_installments', 'first_order', 'last_order']
 
         # Calcul de l'ancienneté
         seller_stats['active_months'] = ((seller_stats['last_order'] - seller_stats['first_order']).dt.days / 30).clip(lower=1)
@@ -432,7 +433,11 @@ class RecommendationFeatureEngine:
         ).round(2)
 
         # Ajout du state (car ta collègue a mis seller_id en index)
-        seller_stats = seller_stats.join(sellers['seller_state'], how='left')
+        #seller_stats = seller_stats.join(sellers['seller_state'], how='left')
+        seller_stats = seller_stats.merge(sellers[['seller_id2', 'seller_state']],on='seller_id2',how='left')
+        
+        #on retourne le truc 
+        seller_stats.to_csv(MLConfig.SELLER_FEATURES_FILE, index=False)
 
         return seller_stats
 
@@ -563,7 +568,7 @@ class RecommendationFeatureEngine:
         print("Création de la matrice d'interaction...")
 
         # Joindre commandes et items
-        interactions = order_items_df.merge(
+        interactions = items_df.merge(
             orders_df[['order_id', 'customer_id', 'order_status']], on='order_id'
         )
 
@@ -602,9 +607,10 @@ def load_and_prepare_data(raw_data_dir) -> Tuple:
     """
     print("📂 Chargement des données pour le Scoring Vendeur...")
 
+
     # 1. Sellers (pour le state)
     sellers = pd.read_csv(raw_data_dir / 'olist_sellers_dataset.csv', 
-                         usecols=['seller_id', 'seller_state']).set_index('seller_id')
+                         usecols=['seller_id', 'seller_state'])
     
     # 2. Orders (pour les dates et le statut)
     orders = pd.read_csv(raw_data_dir / 'olist_orders_dataset.csv',
@@ -627,48 +633,35 @@ def load_and_prepare_data(raw_data_dir) -> Tuple:
     products = pd.read_csv(raw_data_dir / 'olist_products_dataset.csv',
                           usecols=['product_id', 'product_category_name'])
 
-    # Conversion des dates
-    date_cols = ['order_purchase_timestamp', 'order_delivered_customer_date', 'order_estimated_delivery_date']
-    for col in date_cols:
-        orders[col] = pd.to_datetime(orders[col])
+    # Indexation des id pour plus de lisibilité
+    sellers['seller_id2'] = pd.factorize(sellers['seller_id'])[0] + 1
+    items = items.merge( sellers[['seller_id', 'seller_id2']],on='seller_id',how='left')
+
+    orders['order_id2'] = pd.factorize(orders['order_id'])[0] + 1
+    items = items.merge( orders[['order_id', 'order_id2']],on='order_id',how='left')
+    reviews = reviews.merge( orders[['order_id', 'order_id2']],on='order_id',how='left')
+    payments = payments.merge( orders[['order_id', 'order_id2']],on='order_id',how='left')
+
+    products['product_id2'] = pd.factorize(products['product_id'])[0] + 1
+    items = items.merge( products[['product_id', 'product_id2']],on='product_id',how='left')
+
+    # Suppression des ancien id
+    sellers.drop(columns=['seller_id'], inplace=True)
+    items.drop(columns=['seller_id', 'order_id', 'product_id'], inplace=True)
+    orders.drop(columns=['order_id'], inplace=True)
+    products.drop(columns=['product_id'], inplace=True)
+
+    # Conversion des dates (important pour calculer la récence!)
+    date_columns = ['order_purchase_timestamp',
+                    'order_delivered_customer_date','order_estimated_delivery_date']
+
+    for col in date_columns:
+        if col in orders.columns:
+            orders[col] = pd.to_datetime(orders[col])
+
+    print(f" {len(orders)} commandes, "
+          f"{len(items)} items, {len(products)} produits, {len(reviews)} avis")
 
     # L'ORDRE : create_seller_features(self, sellers, orders, items, payments, reviews, products)
     return sellers, orders, items, payments, reviews, products
 
-
-# ============================================
-# GUIDE D'UTILISATION POUR L'ÉTUDIANT
-# ============================================
-"""
-COMMENT EXPLORER CE CODE:
-
-1. COMMENCER PAR LES BASES:
-   - Lire les features implémentées (marquées dans les commentaires)
-   - Comprendre RFM: Récence, Fréquence, Montant
-   - Observer le processus fit() -> transform()
-
-2. EXPÉRIMENTER:
-   - Décommenter les features avancées
-   - Modifier les paramètres (ex: q=4 -> q=5 dans les quartiles)
-   - Ajouter vos propres features (exercices proposés)
-
-3. ANALYSER:
-   - Utiliser feature_importances_ du modèle pour voir quelles features sont utiles
-   - Créer des visualisations (histogrammes, boxplots) des features
-   - Comparer les performances avec/sans certaines features
-
-4. ALLER PLUS LOIN:
-   - Implémenter la saisonnalité (mois, jour de la semaine)
-   - Créer des features d'interaction (client_segment × favorite_category)
-   - Tester des transformations (log, sqrt) sur les features numériques
-   - Implémenter du feature selection automatique
-
-RESSOURCES:
-   - Documentation scikit-learn: sklearn.preprocessing
-   - Livre: "Feature Engineering for Machine Learning" (Alice Zheng)
-   - Kaggle: "Feature Engineering Techniques"
-
-OBJECTIF FINAL:
-   Comprendre que de bonnes features > algorithme complexe!
-   80% du succès en ML vient de la qualité des features.
-"""
