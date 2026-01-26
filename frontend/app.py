@@ -50,8 +50,7 @@ def load_credit_model():
     return joblib.load(MLConfig.REVENUE_MODEL_FILE)
 
 # Initialisation des données
-#sellers = load_seller_data()
-sellers = load_and_prepare_data(RAW_DATA_DIR)
+sellers = load_seller_data()
 model_revenue = load_credit_model()
 
 def check_api_health():

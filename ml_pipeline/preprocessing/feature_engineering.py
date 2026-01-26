@@ -432,7 +432,8 @@ class RecommendationFeatureEngine:
         ).round(2)
 
         # Ajout du state (car ta collègue a mis seller_id en index)
-        seller_stats = seller_stats.join(sellers['seller_state'], how='left')
+        #seller_stats = seller_stats.join(sellers['seller_state'], how='left')
+        seller_stats = seller_stats.merge(sellers[['seller_id2', 'seller_state']],on='seller_id2',how='left')
 
         return seller_stats
 
