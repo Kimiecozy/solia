@@ -265,6 +265,8 @@ def main():
         if search_query:
             filtered_df = filtered_df[filtered_df.index.str.contains(search_query, case=False)]
 
+        st.markdown(f"<p style='font-family: monospace; font-size: 0.8rem; color: #64748b; margin-top: 10px;'>UNITÉS FILTRÉES : {len(filtered_df)}</p>", unsafe_allow_html=True)
+
         if not filtered_df.empty:
             name_to_id = {filtered_df.loc[idx, 'seller_name']: idx for idx in filtered_df.index}
             selected_name = st.selectbox("Choisir le profil :", options=list(name_to_id.keys()))
