@@ -40,6 +40,7 @@ from pathlib import Path
 
 # Ajouter le répertoire parent au PYTHONPATH
 sys.path.append(str(Path(__file__).parent.parent.parent))
+from config import MLConfig
 
 
 class CustomerFeatureEngineer(BaseEstimator, TransformerMixin):
@@ -398,10 +399,10 @@ class RecommendationFeatureEngine:
         print("🏗️ Fusion et calcul de la solvabilité par vendeur...")
 
         # Ta logique de merge
-        df = items.merge(orders, on='order_id')
-        df = df.merge(payments, on='order_id', how='left')
-        df = df.merge(reviews, on='order_id', how='left')
-        df = df.merge(products, on='product_id', how='left')
+        df = items.merge(orders, on='order_id2')
+        df = df.merge(payments, on='order_id2', how='left')
+        df = df.merge(reviews, on='order_id2', how='left')
+        df = df.merge(products, on='product_id2', how='left')
 
         # Calcul du taux de retard
         df['is_late'] = (df['order_delivered_customer_date'] > df['order_estimated_delivery_date']).astype(int)
@@ -413,9 +414,9 @@ class RecommendationFeatureEngine:
             'is_late': 'mean',
             'payment_installments': 'mean',
             'order_purchase_timestamp': ['min', 'max']
-        })
+        }).reset_index()
 
-        seller_stats.columns = ['total_revenue', 'avg_review_score', 'late_rate', 'avg_installments', 'first_order', 'last_order']
+        seller_stats.columns = ['seller_id2','total_revenue', 'avg_review_score', 'late_rate', 'avg_installments', 'first_order', 'last_order']
 
         # Calcul de l'ancienneté
         seller_stats['active_months'] = ((seller_stats['last_order'] - seller_stats['first_order']).dt.days / 30).clip(lower=1)
@@ -434,6 +435,9 @@ class RecommendationFeatureEngine:
         # Ajout du state (car ta collègue a mis seller_id en index)
         #seller_stats = seller_stats.join(sellers['seller_state'], how='left')
         seller_stats = seller_stats.merge(sellers[['seller_id2', 'seller_state']],on='seller_id2',how='left')
+        
+        #on retourne le truc 
+        seller_stats.to_csv(MLConfig.SELLER_FEATURES_FILE, index=False)
 
         return seller_stats
 
@@ -640,6 +644,12 @@ def load_and_prepare_data(raw_data_dir) -> Tuple:
 
     products['product_id2'] = pd.factorize(products['product_id'])[0] + 1
     items = items.merge( products[['product_id', 'product_id2']],on='product_id',how='left')
+
+    # Suppression des ancien id
+    sellers.drop(columns=['seller_id'], inplace=True)
+    items.drop(columns=['seller_id', 'order_id', 'product_id'], inplace=True)
+    orders.drop(columns=['order_id'], inplace=True)
+    products.drop(columns=['product_id'], inplace=True)
 
     # Conversion des dates (important pour calculer la récence!)
     date_columns = ['order_purchase_timestamp',
