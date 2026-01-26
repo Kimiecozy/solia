@@ -26,11 +26,14 @@ import joblib
 import sys
 from pathlib import Path
 
+
 # Ajouter le répertoire racine au PYTHONPATH
 sys.path.append(str(Path(__file__).parent.parent))
 
+
 # 1. On importe la classe MLConfig au lieu des variables directes
-from config import MLConfig
+from config import MLConfig, RAW_DATA_DIR
+from ml_pipeline.preprocessing.feature_engineering import load_and_prepare_data
 
 # Configuration de l'API
 API_BASE_URL = "http://localhost:8000/api/v1"
@@ -39,7 +42,7 @@ API_BASE_URL = "http://localhost:8000/api/v1"
 @st.cache_data
 def load_seller_data():
     """Charge la base des vendeurs générée par le train_model.py."""
-    return pd.read_csv(MLConfig.SELLER_FEATURES_FILE, index_col='seller_id')
+    return pd.read_csv(MLConfig.SELLER_FEATURES_FILE)
 
 @st.cache_resource
 def load_credit_model():
@@ -47,7 +50,8 @@ def load_credit_model():
     return joblib.load(MLConfig.REVENUE_MODEL_FILE)
 
 # Initialisation des données
-df_sellers = load_seller_data()
+#sellers = load_seller_data()
+sellers = load_and_prepare_data(RAW_DATA_DIR)
 model_revenue = load_credit_model()
 
 def check_api_health():
@@ -70,7 +74,7 @@ def main():
         st.markdown("---")
         page = st.radio("Navigation", ["🎯 Verdict Crédit", "📊 Analyse du Modèle"])
 
-    vendeur = df_sellers.loc[seller_id2]
+    vendeur = sellers.loc[seller_id2]
 
     if page == "🎯 Verdict Crédit":
         show_credit_scoring_page(vendeur)

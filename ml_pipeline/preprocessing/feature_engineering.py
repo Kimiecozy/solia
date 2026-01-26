@@ -406,8 +406,8 @@ class RecommendationFeatureEngine:
         # Calcul du taux de retard
         df['is_late'] = (df['order_delivered_customer_date'] > df['order_estimated_delivery_date']).astype(int)
 
-        # Agrégation par SELLER_ID
-        seller_stats = df.groupby('seller_id').agg({
+        # Agrégation par SELLER_ID2
+        seller_stats = df.groupby('seller_id2').agg({
             'price': 'sum',
             'review_score': 'mean',
             'is_late': 'mean',
@@ -563,7 +563,7 @@ class RecommendationFeatureEngine:
         print("Création de la matrice d'interaction...")
 
         # Joindre commandes et items
-        interactions = order_items_df.merge(
+        interactions = items_df.merge(
             orders_df[['order_id', 'customer_id', 'order_status']], on='order_id'
         )
 
@@ -630,15 +630,15 @@ def load_and_prepare_data(raw_data_dir) -> Tuple:
 
     # Indexation des id pour plus de lisibilité
     sellers['seller_id2'] = pd.factorize(sellers['seller_id'])[0] + 1
-    order_items = order_items.merge( sellers[['seller_id', 'seller_id2']],on='seller_id',how='left')
+    items = items.merge( sellers[['seller_id', 'seller_id2']],on='seller_id',how='left')
 
     orders['order_id2'] = pd.factorize(orders['order_id'])[0] + 1
-    order_items = order_items.merge( orders[['order_id', 'order_id2']],on='order_id',how='left')
+    items = items.merge( orders[['order_id', 'order_id2']],on='order_id',how='left')
     reviews = reviews.merge( orders[['order_id', 'order_id2']],on='order_id',how='left')
-    payements = payements.merge( orders[['order_id', 'order_id2']],on='order_id',how='left')
+    payments = payments.merge( orders[['order_id', 'order_id2']],on='order_id',how='left')
 
     products['product_id2'] = pd.factorize(products['product_id'])[0] + 1
-    order_items = order_items.merge( products[['product_id', 'product_id2']],on='product_id',how='left')
+    items = items.merge( products[['product_id', 'product_id2']],on='product_id',how='left')
 
     # Conversion des dates (important pour calculer la récence!)
     date_columns = ['order_purchase_timestamp',
@@ -649,8 +649,8 @@ def load_and_prepare_data(raw_data_dir) -> Tuple:
             orders[col] = pd.to_datetime(orders[col])
 
     print(f" {len(orders)} commandes, "
-          f"{len(order_items)} items, {len(products)} produits, {len(reviews)} avis")
+          f"{len(items)} items, {len(products)} produits, {len(reviews)} avis")
 
     # L'ORDRE : create_seller_features(self, sellers, orders, items, payments, reviews, products)
-    return sellers, orders, order_items, products, reviews, payements
+    return sellers, orders, items, products, reviews, payments
 
