@@ -1,0 +1,375 @@
+/* --- TYPOGRAPHIE & BASE --- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+    --primary: #0066ff;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --error: #ef4444;
+    --bg-light: #fcfcfd;
+    --border-color: #e5e7eb;
+}
+
+html, body, [class*="css"] {
+    font-family: 'Inter', sans-serif !important;
+    color: #111827;
+}
+
+/* Fond de l'application */
+.stApp {
+    background-color: var(--bg-light);
+}
+
+/* --- CARTES DE MÉTRIQUES (LOOK FINTECH) --- */
+[data-testid="stMetric"] {
+    background: white !important;
+    border: 1px solid var(--border-color) !important;
+    padding: 24px !important;
+    border-radius: 16px !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+[data-testid="stMetric"]:hover {
+    transform: translateY(-4px) !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+    border-color: var(--primary) !important;
+}
+
+/* Masquer le label par défaut pour un look plus épuré si besoin, 
+   ou simplement l'affiner */
+[data-testid="stMetricLabel"] {
+    font-size: 0.85rem !important;
+    color: #6b7280 !important;
+    font-weight: 500 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+[data-testid="stMetricValue"] {
+    font-size: 1.8rem !important;
+    font-weight: 700 !important;
+    color: #111827 !important;
+}
+
+/* --- ONGLETS (TABS) MODERNES --- */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 12px !important;
+    background-color: #f3f4f6 !important;
+    padding: 6px !important;
+    border-radius: 12px !important;
+}
+
+.stTabs [data-baseweb="tab"] {
+    border-radius: 8px !important;
+    padding: 8px 20px !important;
+    background-color: transparent !important;
+    border: none !important;
+    color: #4b5563 !important;
+    transition: all 0.2s !important;
+}
+
+.stTabs [data-baseweb="tab"][aria-selected="true"] {
+    background-color: white !important;
+    color: var(--primary) !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* --- BARRE LATÉRALE (SIDEBAR) --- */
+[data-testid="stSidebar"] {
+    background-color: #ffffff !important;
+    border-right: 1px solid var(--border-color) !important;
+}
+
+/* Bouton Radio de navigation (si tu l'utilises encore) */
+div[data-testid="stSidebarNav"] {
+    padding-top: 2rem !important;
+}
+
+/* --- INTERFACE CHATBOT (BULLLES) --- */
+.stChatMessage {
+    border-radius: 20px !important;
+    padding: 15px !important;
+    margin-bottom: 12px !important;
+    border: 1px solid transparent !important;
+}
+
+/* Différencier l'assistant du user */
+[data-testid="stChatMessage"]:nth-child(even) {
+    background-color: #f3f4f6 !important; /* Assistant */
+}
+
+[data-testid="stChatMessage"]:nth-child(odd) {
+    background-color: #e0f2fe !important; /* User */
+    border-color: #bae6fd !important;
+}
+
+/* --- BOUTONS --- */
+.stButton > button {
+    width: 100%;
+    border-radius: 10px !important;
+    background-color: var(--primary) !important;
+    color: white !important;
+    border: none !important;
+    font-weight: 600 !important;
+    padding: 0.6rem 1rem !important;
+    transition: opacity 0.2s !important;
+}
+
+.stButton > button:hover {
+    opacity: 0.9 !important;
+}
+
+/* --- SCROLLBARS FINES --- */
+::-webkit-scrollbar {
+    width: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 10px;
+}
+
+/* --- TABLEAUX & DATAFRAMES (LOOK ÉPURÉ) --- */
+[data-testid="stTable"], [data-testid="stDataFrame"] {
+    border: 1px solid var(--border-color) !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    background: white !important;
+}
+
+/* Header des tableaux */
+thead tr th {
+    background-color: #f9fafb !important;
+    color: #4b5563 !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    font-size: 0.75rem !important;
+    letter-spacing: 0.05em !important;
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+/* --- EXPANDERS (DÉTAILS TECHNIQUES) --- */
+[data-testid="stExpander"] {
+    border: 1px solid var(--border-color) !important;
+    border-radius: 12px !important;
+    background-color: white !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
+    margin-bottom: 1rem !important;
+}
+
+[data-testid="stExpanderSummary"] {
+    font-weight: 600 !important;
+    color: #374151 !important;
+}
+
+/* --- INPUTS & SELECTBOX (LOOK MODERNE) --- */
+div[data-baseweb="select"] > div {
+    border-radius: 10px !important;
+    border: 1px solid var(--border-color) !important;
+    background-color: #fcfcfd !important;
+    transition: all 0.2s ease !important;
+}
+
+div[data-baseweb="select"] > div:focus-within {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1) !important;
+}
+
+/* --- DIVISEURS --- */
+hr {
+    margin: 2rem 0 !important;
+    border: 0 !important;
+    border-top: 1px solid var(--border-color) !important;
+    opacity: 0.6 !important;
+}
+
+/* --- MESSAGES D'ALERTE (SUCCESS/ERROR/WARNING) --- */
+.stAlert {
+    padding: 1rem !important;
+    border-radius: 12px !important;
+    border: none !important;
+}
+
+/* Success : Fond vert très léger, texte foncé */
+div[data-testid="stNotification"] {
+    border-left: 5px solid var(--primary) !important;
+}
+
+/* --- CONTENEURS DE GRAPHIQUES --- */
+/* On force les graphiques Plotly à s'insérer dans des "cartes" blanches */
+.stPlotlyChart {
+    background-color: white !important;
+    border: 1px solid var(--border-color) !important;
+    padding: 15px !important;
+    border-radius: 16px !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+}
+
+/* --- ANIMATION DE CHARGEMENT DE PAGE --- */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.main .block-container {
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* --- PETITE TOUCHE : LE LOGO/NOM DANS LA SIDEBAR --- */
+.sidebar-content {
+    padding: 2rem 1rem !important;
+}
+
+/* --- CONFIGURATION GÉNÉRALE DES TITRES --- */
+h1, h2, h3, h4 {
+    text-align: center !important; /* Centrage impératif */
+    font-family: 'Inter', sans-serif !important;
+    display: block !important;
+    width: 100%;
+}
+
+/* --- TITRE PRINCIPAL (H1) - L'EFFET VAGUE --- */
+h1 {
+    /* Dégradé professionnel bleu profond vers bleu vif */
+    background: linear-gradient(
+        to right, 
+        #0033aa 0%, 
+        #2563eb 50%, 
+        #0033aa 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: wave-slow 8s linear infinite; /* Vague très lente */
+    
+    font-weight: 800 !important;
+    font-size: 3.5rem !important; /* Grand et impactant */
+    letter-spacing: -0.02em;
+    margin-bottom: 1.5rem !important;
+    padding-bottom: 0.5rem;
+    
+    /* Subtile ombre portée sur le texte pour le détacher du fond */
+    filter: drop-shadow(0px 4px 6px rgba(0, 51, 170, 0.2));
+}
+
+/* --- SOUS-TITRES (H2) - ÉPURÉS ET CLAIRS --- */
+h2 {
+    color: #1e3a8a !important; /* Bleu marine très sobre, pas de dégradé */
+    font-weight: 600 !important;
+    font-size: 2rem !important;
+    margin-top: 2.5rem !important; /* Espace important au-dessus */
+    margin-bottom: 1rem !important;
+}
+
+/* --- SOUS-SOUS-TITRES (H3) --- */
+h3 {
+    color: #4b5563 !important; /* Gris foncé pour hiérarchiser */
+    font-weight: 500 !important;
+    font-size: 1.25rem !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 1rem !important;
+}
+
+/* --- SUPPRESSION TOTALE DES BARRES --- */
+/* On s'assure qu'aucun trait n'apparaît en dessous */
+h1::after, h2::after, h3::after {
+    content: none !important;
+    display: none !important;
+}
+
+/* --- ANIMATION DE LA VAGUE (PLUS DOUCE) --- */
+@keyframes wave-slow {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+}
+
+/* --- CORRECTION VISIBILITÉ INPUT (RECHERCHE UUID) --- */
+
+/* Cible l'encadré de saisie de texte dans la sidebar */
+[data-testid="stSidebar"] div[data-baseweb="input"] {
+    background-color: #ffffff !important; /* Fond blanc pur pour le contraste */
+    border: 1.5px solid #111827 !important; /* Bordure noire/anthracite très visible */
+    border-radius: 8px !important;
+    transition: all 0.2s ease-in-out !important;
+}
+
+/* Style du texte que tu tapes */
+[data-testid="stSidebar"] input {
+    color: #111827 !important; /* Texte noir profond */
+    font-weight: 500 !important;
+}
+
+/* Effet quand on clique dans la barre de recherche */
+[data-testid="stSidebar"] div[data-baseweb="input"]:focus-within {
+    border-color: #2563eb !important; /* Bordure devient bleue SolIA */
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important; /* Halo bleu discret */
+}
+
+/* Ajustement du label au-dessus de l'input */
+[data-testid="stSidebar"] label p {
+    color: #111827 !important; /* Label en noir pour être sûr de le lire */
+    font-weight: 600 !important;
+}
+
+/* --- CHATBOT PAGE OVERHAUL --- */
+
+/* Style des boutons d'action rapide */
+div[data-testid="stColumn"] .stButton > button {
+    width: 100% !important;
+    background-color: #f8fafc !important; /* Gris très clair */
+    color: #1e293b !important; /* Texte ardoise foncé */
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    padding: 0.6rem 1rem !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+}
+
+div[data-testid="stColumn"] .stButton > button:hover {
+    background-color: #334155 !important; /* Slate plus foncé au hover */
+    color: white !important;
+    border-color: #334155 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+}
+
+/* Bulles de discussion */
+[data-testid="stChatMessage"] {
+    background-color: transparent !important;
+    border-radius: 16px !important;
+    padding: 1.5rem !important;
+    border: 1px solid #f1f5f9 !important;
+    margin-bottom: 1.2rem !important;
+    font-family: 'Inter', sans-serif !important;
+}
+
+/* Bulle Utilisateur */
+[data-testid="stChatMessage"]:nth-of-type(even) {
+    background-color: #f1f5f9 !important; /* Gris bleuté très doux */
+    border: none !important;
+}
+
+/* Bulle Assistant */
+[data-testid="stChatMessage"]:nth-of-type(odd) {
+    background-color: white !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03) !important;
+}
+
+/* Header et sous-titres */
+h1 {
+    color: #0f172a !important;
+    font-weight: 800 !important;
+    letter-spacing: -1px !important;
+}
+
+/* Input de chat */
+[data-testid="stChatInput"] {
+    border-radius: 20px !important;
+}

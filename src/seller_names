@@ -1,0 +1,8 @@
+import pandas as pd 
+
+#Chargement du fichier CSV
+df=pd.read_csv('data/processed/seller_features.csv', sep= ';')
+if "seller_name" in df.columns:
+    df = df.drop("seller_name", axis=1)
+# Sauvegarder
+df.to_csv("seller_features.csv", sep=";", index=False)
