@@ -11,7 +11,6 @@ Cette application web permet de:
 - Visualiser les performances du modèle
 - Explorer les données et résultats
 - Démontrer le système complet aux étudiants
-- CHATBOT pour requêtes naturelles sur solvabilité/revenue
 
 Architecture:
 - Streamlit pour l'interface utilisateur
@@ -203,10 +202,8 @@ def show_chatbot_page(df, current_vendeur):
 # 2. On utilise le préfixe MLConfig. pour accéder aux chemins
 @st.cache_data
 def load_seller_data():
-    df = pd.read_csv(MLConfig.SELLER_FEATURES_FILE, sep=";", index_col="seller_id")
-    # Ajouter le mapping name → id
-    df['seller_name'] = [f"vendeur{i+1}" for i in range(len(df))]
-    return df
+    """Charge la base des vendeurs générée par le train_model.py."""
+    return pd.read_csv(MLConfig.SELLER_FEATURES_FILE)
 
 @st.cache_resource
 def load_credit_model():
@@ -216,24 +213,6 @@ def load_credit_model():
 # Initialisation des données
 sellers = load_seller_data()
 model_revenue = load_credit_model()
-
-def get_recommendations(customer_id, n_recommendations=10):
-    """Obtient les recommandations pour un client."""
-    try:
-        payload = {
-            "customer_id": customer_id,
-            "n_recommendations": n_recommendations
-        }
-        response = requests.post(f"{API_BASE_URL}/recommendations", json=payload)
-
-        if response.status_code == 200:
-            return response.json()
-        else:
-            st.error(f"Erreur API: {response.status_code} - {response.text}")
-            return None
-    except Exception as e:
-        st.error(f" Erreur lors de la génération de recommandations: {e}")
-        return None
 
 def check_api_health():
     """Vérifie la santé de l'API."""
@@ -286,17 +265,10 @@ def main():
     elif page == "Assistant Chatbot":
         show_chatbot_page(sellers, vendeur_data)
 
-    # --- 3. AFFICHAGE DES PAGES ---
-    if page == "Verdict Crédit":
-        show_credit_scoring_page(vendeur_data, selected_name)
-    elif page == "Fiabilité du Modèle":
-        show_model_analysis_page()
-    elif page == "Assistant Chatbot":
-        show_chatbot_page(df_sellers, vendeur_data)
 
 def show_model_analysis_page():
     """Affiche les performances techniques du modèle de régression."""
-    st.header(" Analyse technique du modèle")
+    st.header("📊 Analyse technique du modèle")
 
     # 1. Explication des métriques
     st.markdown("""
@@ -305,7 +277,7 @@ def show_model_analysis_page():
     """)
 
     # 2. Importance des Features (Le pourquoi du score)
-    st.subheader(" Importance des critères")
+    st.subheader("🔍 Importance des critères")
     
     # On récupère l'importance des variables directement depuis le modèle chargé
     importances = model_revenue.feature_importances_
@@ -327,7 +299,7 @@ def show_model_analysis_page():
     st.plotly_chart(fig, use_container_width=True)
 
     # 3. Rappel des performances globales (Métriques de l'entraînement)
-    st.subheader(" Précision du système")
+    st.subheader("🎯 Précision du système")
     col1, col2 = st.columns(2)
     
     with col1:
@@ -339,9 +311,6 @@ def show_model_analysis_page():
         st.write("L'incertitude moyenne sur le CA prédit.")
 
 
-def show_credit_scoring_page(vendeur, seller_name):
-    st.header(f"Analyse du Vendeur : **{seller_name}**")
-    st.caption(f"ID: {vendeur.name[:8]}...")
 
 def show_credit_scoring_page(vendeur, seller_name):
     st.header(f"Analyse du Vendeur : **{seller_name}**")
@@ -367,7 +336,7 @@ def show_credit_scoring_page(vendeur, seller_name):
     st.markdown("---")
     
     # 3. Prédiction du CA Futur
-    st.subheader(" Capacité de Remboursement")
+    st.subheader("🔮 Capacité de Remboursement")
     # Préparer les données pour le modèle (doit être le même ordre que dans train_model.py)
     input_data = pd.DataFrame([[
         vendeur['avg_review_score'], 
