@@ -1,5 +1,5 @@
 # ===============================================
-# 🚀 OLIST RECOMMENDATION SYSTEM - REQUIREMENTS
+# SOLIA - REQUIREMENTS
 # Master 2 - SEP
 # ===============================================
 
