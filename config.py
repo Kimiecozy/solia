@@ -3,9 +3,7 @@
 # Master 2 - SEP
 # ===============================================
 
-import os
 from pathlib import Path
-from typing import Optional
 
 # ==========================================
 # 📁 PATHS CONFIGURATION
@@ -44,6 +42,8 @@ class MLConfig:
     FEATURE_PIPELINE_FILE = MODELS_DIR / "feature_pipeline.joblib"
     CUSTOMER_FEATURES_FILE = PROCESSED_DATA_DIR / "customer_features.csv"
     PRODUCT_FEATURES_FILE = RAW_DATA_DIR / "olist_products_dataset.csv"
+    SELLER_FEATURES_FILE = PROCESSED_DATA_DIR / "seller_features.csv"
+    REVENUE_MODEL_FILE = MODELS_DIR / "revenue_prediction_model.joblib"
 
 # ==========================================
 # 🚀 API CONFIGURATION
@@ -51,10 +51,10 @@ class MLConfig:
 class APIConfig:
     HOST = "127.0.0.1"
     PORT = 8000
-    TITLE = "Olist Recommendation System API"
+    TITLE = "Prêt SolIA"
     VERSION = "1.0.0"
     DESCRIPTION = """
-    🛒 **Olist Recommendation System API**
+    **Prêt SolIA**
 
     Cette API fournit des recommandations personnalisées basées sur:
     - L'historique d'achat des clients
@@ -71,8 +71,8 @@ class APIConfig:
 # 🎨 STREAMLIT CONFIGURATION
 # ==========================================
 class StreamlitConfig:
-    PAGE_TITLE = "🛒 Olist Recommendation System"
-    PAGE_ICON = "🛒"
+    PAGE_TITLE = "SolIA"
+    PAGE_ICON = "🤖"
     LAYOUT = "wide"
     SIDEBAR_STATE = "expanded"
 
@@ -88,23 +88,22 @@ class DataConfig:
         'orders': 'olist_orders_dataset.csv',
         'order_items': 'olist_order_items_dataset.csv',
         'products': 'olist_products_dataset.csv',
-        'reviews': 'olist_order_reviews_dataset.csv'
+        'reviews': 'olist_order_reviews_dataset.csv',
+        'payments': 'olist_order_payments_dataset.csv',
+        'sellers': 'olist_sellers_dataset.csv'
     }
 
-    # Features pour le modèle de recommandation
-    CUSTOMER_FEATURES = [
-        'total_orders',
-        'total_spent',
-        'avg_order_value',
-        'days_since_last_order',
-        'favorite_category',
+
+    # Nouvelles features pour le scoring vendeur
+    SELLER_FEATURES = [
+        'total_revenue',
         'avg_review_score',
-        'unique_products_bought'
+        'late_rate',
+        'avg_installments',
+        'active_months',
+        'solvability_score' # 👈 Ta nouvelle colonne
     ]
 
-    # Seuils pour la segmentation client
-    HIGH_VALUE_THRESHOLD = 500  # Client haute valeur si > 500€
-    FREQUENT_BUYER_THRESHOLD = 5  # Client fréquent si > 5 commandes
 
 # ==========================================
 # 🔧 LOGGING CONFIGURATION

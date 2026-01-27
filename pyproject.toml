@@ -16,10 +16,11 @@ name = "SolIA"
 version = "1.0.0"
 description = "Générer une offre de prêt personnalisée et argumentée destinée aux petits vendeurs e-commerce"
 readme = "README.md"
+# Version corrigée
 authors = [
     {name = "Idriss Jourdan"},
     {name = "Rezi Sabashvili"},
-    {name  = "Kim Thai"},
+    {name = "Kim Thai"},
     {name = "Cassandre Grilo"}
 ]
 keywords = [

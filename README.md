@@ -1,32 +1,33 @@
-# 🛒 Olist Recommendation System
+# **SolIA**
 
-**SolIA**
-
-Jourdan Idriss, Sabashvili Rezi, Thai Kim et Grilo Cassandre
+Jourdan Idriss, Sabashvili Rezi, Thai Kim et Grilo Cassandre  
 Sous la direction de : Mohamed TRIBAK
 
----
+# 1. Le Concept : Le Pivot SolIA  
+L’objectif est passé d’un système de recommandation B2C (recommander des produits) à un système de __Credit Scoring B2B__. Nous analysons la santé financière d’un vendeur Olist pour déterminer son __éligibilité à un prêt bancaire__.  
 
-## Vue d'ensemble du Projet
+# 2. Architecture des Données  
+Le moteur traite __6 bases de données__ (_Orders_, _Items_, _Payments_, _Reviews_, _Products_, _Sellers_). Contrairement au projet initial, nous agrégeons tout par `seller_id` pour obtenir des indicateurs de performance commerciale et logistique.  
 
-Ce projet implémente un **système de recommandation complet** pour la plateforme e-commerce Olist. Il démontre l'intégration de machine learning en production avec une architecture moderne séparant le frontend du backend.
+# 3. Le Score de Solvabilité (La Formule)  
+Pour évaluer le risque, nous avons créé un score hybride sur __100 points__ basé sur trois piliers :  
+* __Performance (40%)__ : Volume d’affaires total (CA).  
+* __Satisfaction (30%)__ : Note moyenne des avis clients.  
+* __Fiabilité (30%)__ : Maîtrise des délais (inverse du taux de retard). 
 
-### Objectifs Pédagogiques
+__Calcul du score__ : *Score = (Norm_CA × 40) + (Norm_Sat × 30) + (Norm_Logistique × 30)*
 
-- **Machine Learning en production** : Pipeline complet de données, entraînement et déploiement
-- **Architecture logicielle moderne** : API REST, microservices, séparation des responsabilités
-- **Data Science appliquée** : Feature engineering, validation de modèle, métriques business
-- **Stack technologique actuelle** : FastAPI, Streamlit, scikit-learn
+# 4. Le Modèle Prédictif  
+Nous utilisons un Random Forest Regressor. Au lieu de prédire une catégorie, il prédit une valeur monétaire : le Chiffre d’Affaires futur.    
+* __Variables d’entrée__ (*X*) : Note moyenne, taux de retard, mensualités moyennes, an- cienneté, score de solvabilité.  
+* __Variable cible__ (*y*) : Revenu total.  
+* __Performance__ : Fiabilité (R2) de __95%__ et erreur moyenne (MAE) de __1779 R$__.  
 
-### Démonstration
-
-Le système permet de :
-- Générer des recommandations personnalisées pour chaque client
-- Visualiser les performances du modèle ML en temps réel
-- Explorer les données et analyser les patterns
-- Tester l'API via une interface utilisateur intuitive
-
----
+# 5. L’Outil de Décision (Dashboard Streamlit)  
+L’interface permet de simuler une demande de prêt en temps réel :  
+* __Verdict visuel__ : Vert (éligible), Orange (à étudier), Rouge (refusé).  
+* __Capacité de remboursement__ : Calcul automatique d’une __mensualité maximale__
+plafonnée à __30% du CA prédit__ par l’IA.  
 
 ## Architecture du Système
 
@@ -132,77 +133,6 @@ uv run pytest tests/ -m "not slow" -v
 
 ---
 
-## Utilisation du Système
-
-### Génération de Recommandations
-
-#### Via l'Interface Streamlit
-
-1. Sélectionner un client dans la liste
-2. Choisir le nombre de recommandations
-3. Cliquer sur "Générer les recommandations"
-4. Analyser les résultats et visualisations
-
-#### Via l'API REST
-```bash
-# Obtenir des recommandations
-curl -X POST "http://localhost:8000/api/v1/recommendations" \
-     -H "Content-Type: application/json" \
-     -d '{"customer_id": "customer_001", "n_recommendations": 5}'
-
-# Lister les clients disponibles
-curl "http://localhost:8000/api/v1/customers"
-
-# Voir les performances du modèle
-curl "http://localhost:8000/api/v1/model/info"
-```
-
-### Analyse des Performances
-
-Le système fournit plusieurs métriques :
-
-- **Précision** : Train/Test accuracy
-- **AUC-ROC** : Capacité de discrimination
-- **Cross-validation** : Robustesse du modèle
-- **Feature importance** : Variables les plus prédictives
-
----
-
-## Machine Learning Pipeline
-
-### Feature Engineering
-
-Le système utilise une approche **RFM** (Récence, Fréquence, Montant) enrichie :
-
-```python
-# Features clients principales
-- total_orders          # Nombre de commandes
-- total_spent           # Montant total dépensé
-- avg_order_value       # Panier moyen
-- days_since_last_order # Récence dernière commande
-- avg_review_score      # Satisfaction moyenne
-- favorite_category     # Catégorie préférée
-- unique_products_bought # Diversité des achats
-```
-
-### Modèle de Recommandation
-
-**RandomForest Classifier** avec :
-- **100 arbres** pour la robustesse
-- **Features hybrides** (client + produit + contexte)
-- **Échantillonnage stratifié** des exemples négatifs
-- **Validation croisée 5-fold**
-
-### Évaluation du Modèle
-
-```python
-# Métriques calculées automatiquement
-- Accuracy (train/test)
-- AUC-ROC score
-- Cross-validation score
-- Feature importance
-- Confusion matrix
-```
 
 ---
 ## Structure du Projet
@@ -239,42 +169,6 @@ olist_recommendation_system/
 └── README.md                 # Ce fichier
 ```
 
-## Exercices pour les Étudiants
-
-### Niveau Débutant
-
-1. **Test des recommandations**
-   - Tester avec différents clients
-   - Observer les variations de probabilité
-   - Analyser les recommandations les plus fréquentes
-
-2. **Analyse des features**
-   - Examiner l'importance des variables
-   - Comprendre l'impact de chaque feature
-   - Identifier les features les plus prédictives
-
-### Niveau Intermédiaire
-
-3. **Optimisation des hyperparamètres**
-   ```python
-   # Modifier dans config.py
-   RANDOM_FOREST_PARAMS = {
-       'n_estimators': 200,  # Tester 50, 100, 200
-       'max_depth': 15,      # Tester 10, 15, 20
-       'min_samples_split': 3,
-       'min_samples_leaf': 1
-   }
-   ```
-
-4. **Algorithmes alternatifs**
-   - Tester XGBoost
-   - Essayer LightGBM
-   - Comparer les performances
-
-5**Déploiement**
-   - Conteneuriser avec Docker
-
---
 
 ## Tests et Validation
 
@@ -327,53 +221,3 @@ uv run pytest tests/ -v
 - **Business context** : E-commerce marketplace brésilien
 
 ---
-
-## Contribution et Amélioration
-
-### Workflow de Développement
-
-1. **Fork** le repository
-2. Créer une **branche feature** : `git checkout -b feature/nouvelle-feature`
-3. **Commiter** les changements : `git commit -m "Ajout feature X"`
-4. **Pusher** la branche : `git push origin feature/nouvelle-feature`
-5. Ouvrir une **Pull Request**
-
----
-
-## Métriques de Succès du Projet
-
-### Objectifs d'Apprentissage
-| Compétence | Niveau Attendu | Validation |
-|------------|---------------|------------|
-| **ML Pipeline** | Maîtrise | Modèle entraîné avec AUC > 0.7 |
-| **API Development** | Intermédiaire | API fonctionnelle avec docs |
-| **Frontend** | Basique | Interface utilisable |
-| **Data Engineering** | Intermédiaire | Features créées correctement |
-| **Architecture** | Intermédiaire | Séparation front/back respectée |
-
----
-
-## Conclusion
-
-Ce projet **SolIA** vous donne une expérience complète du machine learning en production. Vous apprendrez :
-
-- **Machine Learning** appliqué à un cas d'usage réel
-- **Architecture logicielle** moderne et scalable
-- **Data Science** orientée business et utilisateur
-- **Technologies actuelles** utilisées en entreprise
-
-**Mission accomplie quand :**
-- Votre API répond aux requêtes de recommandation
-- Votre interface Streamlit affiche les résultats
-- Votre modèle a des performances acceptables
-- Votre code est propre et documenté
-
----
-
-## Bonne chance dans votre projet !
-**🚀 Ready to build the future of e-commerce recommendations? Let's code!** ✨
----
-
-*Dernière mise à jour : Décembre 2025*
-*Version : 1.0.0*
-*Auteur : Mohamed TRIBAK pour Master 2 SEP*
