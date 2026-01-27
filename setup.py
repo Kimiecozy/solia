@@ -25,7 +25,7 @@ def download_olist_data():
     print("Téléchargement des données Olist...")
 
     for name, filename in DataConfig.DATASETS.items():
-        url = DataConfig.OLIST_BASE_URL + filename
+        url = DataConfig.SOLIA_BASE_URL + filename
         local_path = RAW_DATA_DIR / filename
 
         if local_path.exists():
@@ -50,7 +50,7 @@ def create_sample_env():
     print("Création du fichier .env d'exemple...")
 
     env_content = """# ===============================================
-# 🚀 OLIST RECOMMENDATION SYSTEM - ENVIRONMENT
+# SOLIA - ENVIRONMENT
 # ===============================================
 
 # API Configuration
@@ -78,7 +78,7 @@ LOG_LEVEL=INFO
 def main():
     """Fonction principale de setup."""
     print("" + "=" * 50)
-    print("OLIST RECOMMENDATION SYSTEM - SETUP")
+    print("SOLIA - SETUP")
     print("Master 2 - SEP")
     print("" + "=" * 50 + "\n")
 
