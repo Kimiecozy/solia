@@ -1,6 +1,6 @@
 # ===============================================
-# 🚀 OLIST RECOMMENDATION SYSTEM - STREAMLIT APP
-# Master 2 - SEP (AVEC CHATBOT INTÉGRÉ)
+# SolIA
+# Master 2 - SEP
 # ===============================================
 
 """
@@ -40,7 +40,7 @@ css_path = Path(__file__).parent / "assets" / "style.css"
 if css_path.exists():
     local_css(css_path)
 
-# Ajouter le répertoire racine
+# Ajouter le répertoire racine au PYTHONPATH
 sys.path.append(str(Path(__file__).parent.parent))
 from config import MLConfig
 
@@ -256,25 +256,35 @@ def main():
         st.markdown('<h3>Filtres de recherche</h3>', unsafe_allow_html=True)
         search_query = st.text_input("ID Vendeur (UUID)", "").strip()
         min_score = st.slider("Solvabilité minimum", 0, 100, 0)
-        min_revenue = st.slider("CA minimum (R$)", 0, int(df_sellers['total_revenue'].max()), 0)
+        min_revenue = st.slider("CA minimum (R$)", 0, int(sellers['total_revenue'].max()), 0)
         
         st.divider()
 
-        filtered_df = df_sellers.copy()
+        filtered_df = sellers.copy()
         filtered_df = filtered_df[(filtered_df['solvability_score'] >= min_score) & (filtered_df['total_revenue'] >= min_revenue)]
         if search_query:
-            filtered_df = filtered_df[filtered_df.index.str.contains(search_query, case=False)]
+            #filtered_df = filtered_df[filtered_df.index.str.contains(search_query, case=False)]
+            filtered_df = filtered_df[filtered_df.index.astype(str).str.contains(search_query, case=False)]
+
 
         st.markdown(f"<p style='font-family: monospace; font-size: 0.8rem; color: #64748b; margin-top: 10px;'>UNITÉS FILTRÉES : {len(filtered_df)}</p>", unsafe_allow_html=True)
 
         if not filtered_df.empty:
             name_to_id = {filtered_df.loc[idx, 'seller_name']: idx for idx in filtered_df.index}
             selected_name = st.selectbox("Choisir le profil :", options=list(name_to_id.keys()))
-            seller_id = name_to_id[selected_name]
-            vendeur_data = filtered_df.loc[seller_id]
+            seller_id2 = name_to_id[selected_name]
+            vendeur_data = filtered_df.loc[seller_id2]
         else:
             st.error("Aucun résultat.")
             st.stop()
+
+    # --- 3. AFFICHAGE DES PAGES ---
+    if page == "Verdict Crédit":
+        show_credit_scoring_page(vendeur_data, selected_name)
+    elif page == "Fiabilité du Modèle":
+        show_model_analysis_page()
+    elif page == "Assistant Chatbot":
+        show_chatbot_page(sellers, vendeur_data)
 
     # --- 3. AFFICHAGE DES PAGES ---
     if page == "Verdict Crédit":
@@ -333,6 +343,10 @@ def show_credit_scoring_page(vendeur, seller_name):
     st.header(f"Analyse du Vendeur : **{seller_name}**")
     st.caption(f"ID: {vendeur.name[:8]}...")
 
+def show_credit_scoring_page(vendeur, seller_name):
+    st.header(f"Analyse du Vendeur : **{seller_name}**")
+    st.caption("Nom du vendeur")
+    
     # 1. Le Score de Solvabilité
     score = vendeur['solvability_score']
     
@@ -366,7 +380,6 @@ def show_credit_scoring_page(vendeur, seller_name):
     
     st.write(f"Notre IA estime que ce vendeur peut générer **{prediction:.2f} R$** de revenus futurs.")
     st.info(f"Mensualité maximale conseillée : **{(prediction * 0.3):.2f} R$** (30% du CA prédit)")
-
 
 def show_chatbot_page(df, current_vendeur):
     # --- TITRE AVEC EFFET WAVE (Injecté via CSS) ---
@@ -418,7 +431,7 @@ def show_chatbot_page(df, current_vendeur):
     prompt = st.chat_input("Une question sur ce dossier ? (ex: Pourquoi ce score ?)")
 
     # Mapping des boutons vers des prompts textuels
-    # Dans ta fonction show_chatbot_page
+
     if btn_diag: prompt = "ACTION_AUDIT_COMPLET"
     if btn_risk: prompt = "ACTION_RISQUE_PAIEMENT"
     if btn_top: prompt = "ACTION_TOP_5"
@@ -461,97 +474,6 @@ def show_chatbot_page(df, current_vendeur):
         
         # Rafraîchissement pour fluidité
         st.rerun()
-
-def show_recommendations_page():
-    """Page principale de génération de recommandations."""
-
-    st.markdown("##  Recommandations Personnalisées")
-
-    # Configuration des recommandations
-    col1, col2 = st.columns([2, 1])
-
-    with col1:
-        st.markdown("### Sélection du client")
-
-        # Charger la liste des clients
-        customers = get_customers()
-        if not customers:
-            st.warning("Aucun client disponible")
-            return
-
-        customer_id = st.selectbox(
-            "Client à analyser",
-            customers,
-            help="Sélectionnez un client pour générer ses recommandations personnalisées"
-        )
-
-    with col2:
-        st.markdown("### Paramètres")
-        n_recommendations = st.slider(
-            "Nombre de recommandations",
-            min_value=1,
-            max_value=20,
-            value=10,
-            help="Nombre de produits à recommander"
-        )
-
-    # Bouton de génération
-    if st.button(" Générer les recommandations", type="primary"):
-        with st.spinner("Génération des recommandations..."):
-            recommendations_data = get_recommendations(customer_id, n_recommendations)
-
-        if recommendations:
-            display_recommendations(recommendations_data)
-        else:
-            st.error("Impossible de générer les recommandations")
-
-def display_recommendations(data):
-    """Affiche les recommandations de manière interactive."""
-
-    st.markdown("---")
-    st.markdown("##  Recommandations Générées")
-
-    # Informations générales
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Client ID", data["customer_id"])
-    with col2:
-        st.metric("Recommandations", data["total_recommendations"])
-    with col3:
-        st.metric("Généré le", data["generated_at"][:10])
-
-    # Graphique des probabilités
-    recommendations = data["recommendations"]
-    df_recs = pd.DataFrame(recommendations)
-
-    fig = px.bar(
-        df_recs,
-        x="rank",
-        y="purchase_probability",
-        color="confidence",
-        title=" Probabilités d'achat par produit",
-        labels={
-            "rank": "Rang de la recommandation",
-            "purchase_probability": "Probabilité d'achat",
-            "confidence": "Niveau de confiance"
-        }
-    )
-    fig.update_layout(height=400)
-    st.plotly_chart(fig, use_container_width=True)
-
-    # Tableau détaillé
-    st.markdown("###  Détail des recommandations")
-
-    for i, rec in enumerate(recommendations):
-        with st.expander(f"#{rec['rank']} - {rec['product_id']} (Probabilité: {rec['purchase_probability']:.3f})"):
-            col1, col2 = st.columns(2)
-
-            with col1:
-                st.write(f"**Product ID:** {rec['product_id']}")
-                st.write(f"**Probabilité:** {rec['purchase_probability']:.3f}")
-                st.write(f"**Confiance:** {rec['confidence']}")
-
-
 
 def show_model_performance_page():
     """Page d'analyse des performances du modèle."""
@@ -621,101 +543,6 @@ def show_model_performance_page():
         )
         fig_importance.update_layout(height=500)
         st.plotly_chart(fig_importance, use_container_width=True)
-
-        # Explication pédagogique
-        st.markdown("####  Interprétation")
-        st.write("""
-        **L'importance des features nous indique:**
-        - Quelles informations client sont les plus prédictives
-        - Comment améliorer le modèle en collectant de meilleures données
-        - Quels aspects du comportement client privilégier
-
-        **Features typiques importantes:**
-        - `total_spent`: Montant total dépensé par le client
-        - `total_orders`: Nombre de commandes passées
-        - `avg_review_score`: Satisfaction moyenne du client
-        - `days_since_last_order`: Récence de la dernière commande
-        """)
-
-def show_data_analysis_page():
-    """Page d'analyse exploratoire des données."""
-
-    st.markdown("##  Analyse des Données")
-
-    # Simuler quelques analyses avec des données factices
-    st.markdown("###  Distribution des Clients")
-
-    # Génération de données simulées pour la démo
-    import numpy as np
-    np.random.seed(42)
-
-    n_customers = 50
-    customer_data = {
-        'Total Orders': np.random.poisson(3, n_customers) + 1,
-        'Total Spent': np.random.exponential(200, n_customers) + 50,
-        'Avg Review Score': np.random.normal(4.0, 0.8, n_customers).clip(1, 5),
-        'Days Since Last Order': np.random.exponential(30, n_customers) + 1
-    }
-
-    df_customers = pd.DataFrame(customer_data)
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        # Distribution du nombre de commandes
-        fig_orders = px.histogram(
-            df_customers,
-            x='Total Orders',
-            title="Distribution du nombre de commandes",
-            labels={'Total Orders': 'Nombre de commandes', 'count': 'Nombre de clients'}
-        )
-        st.plotly_chart(fig_orders, use_container_width=True)
-
-    with col2:
-        # Distribution des montants dépensés
-        fig_spent = px.histogram(
-            df_customers,
-            x='Total Spent',
-            title="Distribution des montants dépensés",
-            labels={'Total Spent': 'Montant dépensé (€)', 'count': 'Nombre de clients'}
-        )
-        st.plotly_chart(fig_spent, use_container_width=True)
-
-    # Corrélations
-    st.markdown("###  Analyse des Corrélations")
-    correlation_matrix = df_customers.corr()
-
-    fig_corr = px.imshow(
-        correlation_matrix,
-        text_auto=True,
-        aspect="auto",
-        title="Matrice de corrélation des features clients"
-    )
-    st.plotly_chart(fig_corr, use_container_width=True)
-
-    # Segmentation RFM simplifiée
-    st.markdown("###  Segmentation RFM")
-
-    # Calculer des quartiles
-    df_customers['Recency_Score'] = pd.qcut(df_customers['Days Since Last Order'], 4, labels=['4', '3', '2', '1'])
-    df_customers['Frequency_Score'] = pd.qcut(df_customers['Total Orders'], 4, labels=['1', '2', '3', '4'], duplicates='drop')
-    df_customers['Monetary_Score'] = pd.qcut(df_customers['Total Spent'], 4, labels=['1', '2', '3', '4'], duplicates='drop')
-
-    # Distribution des segments
-    segment_counts = df_customers.groupby(['Frequency_Score', 'Monetary_Score']).size().reset_index(name='Count')
-
-    fig_segments = px.scatter(
-        segment_counts,
-        x='Frequency_Score',
-        y='Monetary_Score',
-        size='Count',
-        title="Segmentation Fréquence vs Montant",
-        labels={
-            'Frequency_Score': 'Score de Fréquence',
-            'Monetary_Score': 'Score Monétaire'
-        }
-    )
-    st.plotly_chart(fig_segments, use_container_width=True)
 
 if __name__ == "__main__":
     main()

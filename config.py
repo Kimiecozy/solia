@@ -3,9 +3,7 @@
 # Master 2 - SEP
 # ===============================================
 
-import os
 from pathlib import Path
-from typing import Optional
 
 # ==========================================
 # 📁 PATHS CONFIGURATION
@@ -53,10 +51,10 @@ class MLConfig:
 class APIConfig:
     HOST = "127.0.0.1"
     PORT = 8000
-    TITLE = "Olist Recommendation System API"
+    TITLE = "Prêt SolIA"
     VERSION = "1.0.0"
     DESCRIPTION = """
-    🛒 **Olist Recommendation System API**
+    **Prêt SolIA**
 
     Cette API fournit des recommandations personnalisées basées sur:
     - L'historique d'achat des clients
@@ -73,8 +71,8 @@ class APIConfig:
 # 🎨 STREAMLIT CONFIGURATION
 # ==========================================
 class StreamlitConfig:
-    PAGE_TITLE = "🛒 Olist Recommendation System"
-    PAGE_ICON = "🛒"
+    PAGE_TITLE = "SolIA"
+    PAGE_ICON = "🤖"
     LAYOUT = "wide"
     SIDEBAR_STATE = "expanded"
 
@@ -106,20 +104,6 @@ class DataConfig:
         'solvability_score' # 👈 Ta nouvelle colonne
     ]
 
-    # Features pour le modèle de recommandation
-    CUSTOMER_FEATURES = [
-        'total_orders',
-        'total_spent',
-        'avg_order_value',
-        'days_since_last_order',
-        'favorite_category',
-        'avg_review_score',
-        'unique_products_bought'
-    ]
-
-    # Seuils pour la segmentation client
-    HIGH_VALUE_THRESHOLD = 500  # Client haute valeur si > 500€
-    FREQUENT_BUYER_THRESHOLD = 5  # Client fréquent si > 5 commandes
 
 # ==========================================
 # 🔧 LOGGING CONFIGURATION
