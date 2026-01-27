@@ -81,7 +81,7 @@ class StreamlitConfig:
 # ==========================================
 class DataConfig:
     # Olist dataset URLs (pour téléchargement automatique)
-    OLIST_BASE_URL = "https://raw.githubusercontent.com/olist/work-at-olist-data/master/datasets/"
+    SOLIA_BASE_URL = "https://raw.githubusercontent.com/olist/work-at-olist-data/master/datasets/"
 
     DATASETS = {
         'customers': 'olist_customers_dataset.csv',
