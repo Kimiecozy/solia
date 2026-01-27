@@ -11,6 +11,7 @@ Cette application web permet de:
 - Visualiser les performances du modèle
 - Explorer les données et résultats
 - Démontrer le système complet aux étudiants
+- CHATBOT pour requêtes naturelles sur solvabilité/revenue
 
 Architecture:
 - Streamlit pour l'interface utilisateur
