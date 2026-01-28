@@ -3,6 +3,8 @@
 Jourdan Idriss, Sabashvili Rezi, Thai Kim et Grilo Cassandre  
 Sous la direction de : Mohamed TRIBAK
 
+**Live Demo** : [Solia - Votre solution de la solvabilité](https://soliasep2426.streamlit.app/)
+
 # 1. Le Concept : Le Pivot SolIA  
 L’objectif est passé d’un système de recommandation B2C (recommander des produits) à un système de __Credit Scoring B2B__. Nous analysons la santé financière d’un vendeur Olist pour déterminer son __éligibilité à un prêt bancaire__.  
 
